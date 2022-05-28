@@ -1,0 +1,9 @@
+junk/
+bin/
+.o
+.s
+seq
+testalgo
+euclidier
+deploy.sh
+deploy_to_pi.sh
