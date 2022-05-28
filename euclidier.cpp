@@ -35,6 +35,7 @@ void clockStop();
 unsigned long long now();
 unsigned long long ms();
 unsigned long long BOOT_TIME;
+const bool CONNECT_AKAI_NETWORK = false; // automatically connevt to akai network remote port
 long long tick = 0;
 
 vector<double> pulses;
@@ -57,30 +58,38 @@ int main()
     BOOT_TIME = now();
     midiIn = new RtMidiIn();
     midiIn->setCallback(&onMIDI);
-    HWIN = new RtMidiIn();
-    HWIN->setCallback(&onMIDI);
     midiIn->ignoreTypes(false, false, false); // dont ignore clocK
-    HWIN->ignoreTypes(false, false, false);   // dont ignore clocK
-    midiIn->openVirtualPort("Euclidier");
-    midiOut = new RtMidiOut();
-    int op = getOutPort("Akai Network - MIDI");
-    if (op != 99)
-    {
 
-        midiOut->openPort(op);
-        cout << "Opened Network output" << endl;
+    midiOut = new RtMidiOut();
+    if (CONNECT_AKAI_NETWORK)
+    {
+        HWIN = new RtMidiIn();
+        HWIN->setCallback(&onMIDI);
+        HWIN->ignoreTypes(false, false, false); // dont ignore clocK
+
+        int op = getOutPort("Akai Network - MIDI");
+        if (op != 99)
+        {
+
+            midiOut->openPort(op);
+            cout << "Opened Network output" << endl;
+        }
+        else
+        {
+            midiOut->openVirtualPort("Euclidier");
+        }
+        int dp = getinPort("Akai Network - MIDI");
+        if (dp != 99)
+        {
+            delete midiIn;
+            HWIN->openPort(dp);
+            cout << "Opened Network input" << endl;
+        }
     }
     else
-    {
+    { // normal midi
+        midiIn->openVirtualPort("Euclidier");
         midiOut->openVirtualPort("Euclidier");
-    }
-
-    int dp = getinPort("Akai Network - MIDI");
-    if (dp != 99)
-    {
-        delete midiIn;
-        HWIN->openPort(dp);
-        cout << "Opened Network input" << endl;
     }
 
     cout << "Ports opened - Waiting for Midi Clock Input to Start " << endl;
