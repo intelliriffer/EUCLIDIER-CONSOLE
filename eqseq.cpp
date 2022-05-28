@@ -37,9 +37,12 @@ void EQSEQ::tick(long long _tick, long long ts) // tick is a midi clock pulse (2
 
     int div = this->getDiv();
     int step = _tick == 0 ? 0 : (_tick + 1) % ((24 * 4 / div));
-
-    if (step == 0)
+    if (_tick == 0)
+        sstep = 0;
+    if (step == 0) // valid timed step
     {
+        //= (_tick) / (24 * 4 / div);
+
         if (this->SEQ.at(_step) == 1) // pulse note (active)
         {
             long long interval = this->interval();
@@ -64,9 +67,15 @@ void EQSEQ::tick(long long _tick, long long ts) // tick is a midi clock pulse (2
 
         __lastpulse = ts;
         _step++;
+        sstep += 1;
 
         if (_step > this->SEQ.size() - 1)
             _step = 0;
+        if (sstep > 0 && this->loop > 0 && sstep % (this->loop) == 0)
+        {
+            _step = 0;
+            //   cout << "sstep " << sstep << endl;
+        }
     }
 }
 void EQSEQ::clock(long long ts) // triggered every 100 microseconds (1/10 ms)

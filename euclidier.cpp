@@ -250,7 +250,7 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
                 if (trk == 0) // ignore cc 64
                     break;
 
-                SQ[trk].setGATE(limit(VAL, 10, 95));
+                SQ[trk].setGATE(limit(VAL, 0, 64));
                 break;
             case 8:
 
@@ -260,7 +260,7 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
             case 9: // edge cases for force
                 if (trk == 0)
                 {
-                    SQ[trk].setGATE(limit(VAL, 10, 95));
+                    SQ[trk].setGATE(limit(VAL, 0, 64));
 
                     break;
                 }
@@ -283,6 +283,11 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
             if (trk == 9 && cmd > 0 && cmd <= 8) // velocity humanization messages
             {
                 SQ[cmd - 1].velh = limit(VAL, 0, 50);
+            }
+            if (trk == 10 && cmd > 0 && cmd <= 8) // loop steps 1-64
+            {
+                //  cout << "loop" << endl;
+                SQ[cmd - 1].loop = limit(VAL, 0, 64); // 0=off
             }
         }
     }

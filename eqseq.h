@@ -26,6 +26,7 @@ private:
     int getDiv();
     int getVel();
     int limit(int v, int min, int max);
+    long long sstep = 0;
 
 public:
     int steps = 16;
@@ -34,6 +35,7 @@ public:
     int pulses = 4;
     int shift = 0;
     int gate = 65;
+    int loop = 0;
     int note = 60;
     int vel = 96;
     int velh = 0;

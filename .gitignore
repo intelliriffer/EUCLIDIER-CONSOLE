@@ -7,3 +7,4 @@ testalgo
 euclidier
 deploy.sh
 deploy_to_pi.sh
+.DS_Store

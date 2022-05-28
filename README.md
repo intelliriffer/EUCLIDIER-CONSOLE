@@ -1,4 +1,4 @@
-# Euclidier - 8 Channel Midi Euclidean Note Sequencer for Force/MPC Beta 0.1.2
+# Euclidier - 8 Channel Midi Euclidean Note Sequencer for Force/MPC Beta 0.1.4
 
 
 Features:
@@ -11,6 +11,9 @@ Features:
 6. Sequence Shifting (Offset)
 7. Different Note/Time Divisions per channel.
 8. Will run on Force and Raspberry Pi
+9. ** v 0.1.4 Add Loop Parameter, Loop Parameter Sets the Sequence Restart Point. Values > Steps Creates Polythythms 
+10. New Midi Mapping Layout with Loop Controls added
+
 
 
 ## Installation: 
@@ -58,6 +61,7 @@ or if using Mockba/Kick Gen Mod, you can put in a launch script in their respect
     9. CC: 81,82,83,84,85,86,87,88 : Set Base Velocity of the Channel, default 96
 
     10. CC: 91,92,93,94,95,96,97,98 : Set Velocity Humanization value 0-36 a Random Amount up to the value gets added or subtracted to Base Velocity. Default:0
+    10. CC: 101,102,103,104,105,106,107,108 : Set LOOP Steps (Restart Point) 0=off, the Sequence Restarts at its Number of steps. 1-64 : The sequnce will play cyclickly until Loop Point number of steps have been played and then will restart. Values < steps , will shorten the playing sequence pattern.
 
 ## Building from Source
 ** To use on MPC/Force you must have SSH Access (Firmware Mod)
