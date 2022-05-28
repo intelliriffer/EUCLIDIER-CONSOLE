@@ -1,4 +1,4 @@
-# Euclidier - 8 Channel Midi Euclidean Note Sequencer for Force/MPC Beta 0.1.1
+# Euclidier - 8 Channel Midi Euclidean Note Sequencer for Force/MPC Beta 0.1.2
 
 
 Features:
