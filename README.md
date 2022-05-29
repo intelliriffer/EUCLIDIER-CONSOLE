@@ -1,8 +1,10 @@
 # Euclidier - 8 Channel Midi Euclidean Note Sequencer for Force/MPC Beta 0.1.5
 
+## Download Latest Binaries 0.1.5
+1. [Akai Force, Akai MPC & Raspberry Pi](https://mega.nz/file/p1QgSRpQ#nwKGXLt4yjmty5pK4DfNT3gu3gXPIbFea5-Hh4nf6og)
 
-Features:
 
+## Features:
 1. 8 Independent Channels/Tracks
 2. Custom Midi Channel Per Track
 3. Upto 4 - 32 Steps / Channel
