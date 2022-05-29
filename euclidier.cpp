@@ -36,6 +36,8 @@ unsigned long long now();
 unsigned long long ms();
 unsigned long long BOOT_TIME;
 const bool CONNECT_AKAI_NETWORK = false; // automatically connevt to akai network remote port
+const int STEPMAX = 64;                  // number of max steps and pulses
+
 long long tick = 0;
 
 vector<double> pulses;
@@ -192,8 +194,8 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
         enabled: true/false
         TIMING : 1-5
         ch: 1-16
-        steps: 4-32
-        pulses: 2-32
+        steps: 4-STEMPMAX
+        pulses: 2-STEPMAX
         shift : 0-32
         gate : 10-95%
         */
@@ -224,7 +226,7 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
             case 4:
                 if (trk == 6) // ignore cc 64
                     break;
-                SQ[trk].steps = limit(VAL, 2, 32);
+                SQ[trk].steps = limit(VAL, 2, STEPMAX);
                 SQ[trk].updateSeq();
                 if (SQ[trk].enabled)
                     resync(true);
@@ -232,7 +234,7 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
                 break;
 
             case 5:
-                SQ[trk].pulses = limit(VAL, 1, 32);
+                SQ[trk].pulses = limit(VAL, 1, STEPMAX);
 
                 SQ[trk].updateSeq();
                 if (SQ[trk].enabled)
@@ -240,7 +242,7 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
                 break;
             case 6:
 
-                SQ[trk].shift = limit(VAL, 0, 32);
+                SQ[trk].shift = limit(VAL, 0, STEPMAX);
                 SQ[trk].updateSeq();
                 if (SQ[trk].enabled)
                     resync(true);
@@ -250,7 +252,7 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
                 if (trk == 0) // ignore cc 64
                     break;
 
-                SQ[trk].setGATE(limit(VAL, 0, 64));
+                SQ[trk].setGATE(limit(VAL, 0, 95));
                 break;
             case 8:
 
@@ -260,13 +262,13 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
             case 9: // edge cases for force
                 if (trk == 0)
                 {
-                    SQ[trk].setGATE(limit(VAL, 0, 64));
+                    SQ[trk].setGATE(limit(VAL, 0, 95));
 
                     break;
                 }
                 if (trk == 6) // track 6 cc64
                 {
-                    SQ[trk].steps = limit(VAL, 2, 32);
+                    SQ[trk].steps = limit(VAL, 2, STEPMAX);
                     SQ[trk].updateSeq();
                     if (SQ[trk].enabled)
                         resync(true);
