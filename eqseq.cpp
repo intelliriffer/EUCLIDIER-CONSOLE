@@ -108,23 +108,35 @@ int EQSEQ::getDiv() // return midi time division 1/16,1/4 etc based on midi rece
         div = 16;
         break;
     case 2:
-        div = 12; // dotted 8th
-        break;
-
-    case 3:
         div = 8;
         break;
 
-    case 4:
+    case 3:
         div = 4;
         break;
 
-    case 5:
+    case 4:
         div = 2;
         break;
 
-    case 6:
+    case 5:
         div = 1;
+        break;
+
+    case 6:
+        div = 32;
+        break;
+    case 7:
+        div = 64;
+        break;
+    case 8: // dotted 16
+        div = 12;
+        break;
+    case 9: // dotted 8
+        div = 6;
+        break;
+    case 10: // // dotted 4
+        div = 3;
         break;
     }
     return div;

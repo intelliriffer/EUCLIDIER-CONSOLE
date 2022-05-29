@@ -220,7 +220,7 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
                 break;
 
             case 3:
-                SQ[trk].updateDiv(limit(VAL, 1, 6));
+                SQ[trk].updateDiv(limit(VAL, 1, 10));
                 break;
 
             case 4:
