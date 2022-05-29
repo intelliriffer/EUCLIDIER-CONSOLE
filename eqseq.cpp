@@ -69,7 +69,7 @@ void EQSEQ::tick(long long _tick, long long ts) // tick is a midi clock pulse (2
         _step++;
         sstep += 1;
 
-        if (_step > this->SEQ.size() - 1)
+        if (_step == this->SEQ.size())
             _step = 0;
         if (sstep > 0 && this->loop > 0 && sstep % (this->loop) == 0)
         {

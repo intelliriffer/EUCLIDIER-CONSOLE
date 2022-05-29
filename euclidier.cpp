@@ -224,7 +224,7 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
             case 4:
                 if (trk == 6) // ignore cc 64
                     break;
-                SQ[trk].steps = limit(VAL, 4, 32);
+                SQ[trk].steps = limit(VAL, 2, 32);
                 SQ[trk].updateSeq();
                 if (SQ[trk].enabled)
                     resync(true);
@@ -232,7 +232,7 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
                 break;
 
             case 5:
-                SQ[trk].pulses = limit(VAL, 2, 32);
+                SQ[trk].pulses = limit(VAL, 1, 32);
 
                 SQ[trk].updateSeq();
                 if (SQ[trk].enabled)
@@ -266,7 +266,7 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
                 }
                 if (trk == 6) // track 6 cc64
                 {
-                    SQ[trk].steps = limit(VAL, 4, 32);
+                    SQ[trk].steps = limit(VAL, 2, 32);
                     SQ[trk].updateSeq();
                     if (SQ[trk].enabled)
                         resync(true);
