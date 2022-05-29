@@ -191,19 +191,40 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
     {
         int note = (int)message->at(1);
         int VAL = (int)message->at(2);
-        if (VAL < 10) // disregard notes with velocity less than 10
+        if (VAL < 1) // disregard notes with velocity less than 10
             return;
         int oct = note / 12;
         int xpose = note % 12;
-        if (oct < 8) // valied tracks 1-8 {}
+        if (oct < 8) // xpose tracks 1-8 {}
         {
             int targetCC = (oct * 10) + 2;
+            int ooct = 0;
+            ooct = VAL < 20 ? -1 : 0;
+            ooct = VAL == 127 ? 1 : ooct;
+            SQ[oct].octave = ooct;
             SQ[oct].xpose = xpose;
+            //  cout << "xpose for trk " << oct << ": " << xpose << endl;
+        }
+        if (oct == 8 && xpose < 8) // 96-103
+        {
+            SQ[xpose].octave = 0;
+            // cout << "oct reset for trk" << xpose << " " << 0 << endl;
+        }
+        if (oct == 9 && xpose < 8) // 108-115
+        {
+            SQ[xpose].octave = 1;
+            //   cout << "oct for trk" << xpose << " " << 1 << endl;
+        }
+        if (oct == 10 && xpose < 8) // 127-127
+        {
+            //   cout << "oct for trk" << xpose << " " << -1 << endl;
+            SQ[xpose].octave = -1;
         }
     }
 
     if (typ == 0xB0) // cc message
     {
+
         /*
         params
         enabled: true/false
@@ -220,6 +241,17 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
         int ch = byte0 & 0x0F;
         int trk = CC / 10;
         int cmd = CC % 10;
+        if (CC == 100 && VAL > 0 && VAL % 2 == 0)
+        {
+            for (int i = 0; i < SEQS; i++)
+            {
+
+                SQ[i].octave = 0;
+                SQ[i].xpose = 0;
+            }
+
+            return;
+        }
 
         if (trk < 8) // if sequncer track messages
         {

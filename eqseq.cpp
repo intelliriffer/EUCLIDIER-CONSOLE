@@ -49,7 +49,13 @@ void EQSEQ::tick(long long _tick, long long ts) // tick is a midi clock pulse (2
 
             if (this->enabled)
             {
-                int note = limit(this->note + this->xpose, 0, 127);
+
+                int note = this->note + (12 * this->octave) + this->xpose;
+                int mul = note > 127 ? -1 : 1;
+                while (note < 0 || note > 127)
+                {
+                    note = note + (12 * mul);
+                }
                 this->sendNote(0x90, this->ch - 1, note, this->getVel()); // send note on
                 this->lastNote = note;
 

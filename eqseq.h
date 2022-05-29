@@ -38,6 +38,7 @@ public:
     int loop = 0;
     int note = 60;
     int xpose = 0;
+    int octave = 0;
     int vel = 96;
     int velh = 0;
     bool clockSync = true;
