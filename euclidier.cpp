@@ -187,6 +187,21 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
         handleClockMessage((int)message->at(0));
         return;
     }
+    if (typ == 0x90) // note message
+    {
+        int note = (int)message->at(1);
+        int VAL = (int)message->at(2);
+        if (VAL < 10) // disregard notes with velocity less than 10
+            return;
+        int oct = note / 12;
+        int xpose = note % 12;
+        if (oct < 8) // valied tracks 1-8 {}
+        {
+            int targetCC = (oct * 10) + 2;
+            SQ[oct].xpose = xpose;
+        }
+    }
+
     if (typ == 0xB0) // cc message
     {
         /*

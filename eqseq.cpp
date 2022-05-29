@@ -13,7 +13,7 @@ EQSEQ::EQSEQ()
 }
 void EQSEQ::updateSeq()
 {
-
+    this->_step = 0;
     this->SEQ = BJLUND::bjlund(this->pulses, this->steps); // generate sequence
     if (this->shift > 0)                                   // rotate sequence
     {
@@ -46,11 +46,13 @@ void EQSEQ::tick(long long _tick, long long ts) // tick is a midi clock pulse (2
         if (this->SEQ.at(_step) == 1) // pulse note (active)
         {
             long long interval = this->interval();
-            if (this->enabled)
-                this->sendNote(0x90, this->ch - 1, this->note, this->getVel()); // send note on
-            this->lastNote = this->note;
+
             if (this->enabled)
             {
+                int note = limit(this->note + this->xpose, 0, 127);
+                this->sendNote(0x90, this->ch - 1, note, this->getVel()); // send note on
+                this->lastNote = note;
+
                 try
                 { // compute the time at which the note off will be sent,
                     float _gate = (float)this->gate / 100;
