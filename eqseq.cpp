@@ -49,15 +49,25 @@ void EQSEQ::tick(long long _tick, long long ts) // tick is a midi clock pulse (2
 
             if (this->enabled)
             {
-
-                int note = this->note + (12 * this->octave) + this->xpose;
-                int mul = note > 127 ? -1 : 1;
-                while (note < 0 || note > 127)
+                if (this->mode == 1) // note mode
                 {
-                    note = note + (12 * mul);
+                    int note = this->note + (12 * this->octave) + this->xpose;
+                    int mul = note > 127 ? -1 : 1;
+                    while (note < 0 || note > 127)
+                    {
+                        note = note + (12 * mul);
+                    }
+                    this->sendNote(0x90, this->ch - 1, note, this->getVel()); // send note on
+                    this->lastNote = note;
                 }
-                this->sendNote(0x90, this->ch - 1, note, this->getVel()); // send note on
-                this->lastNote = note;
+
+                if (this->mode > 1) // cc
+                {
+                    int CC = limit(this->note, 1, 119);
+                    this->lastRandVal = this->getVel();
+                    this->sendNote(0xB0, this->ch - 1, CC, this->lastRandVal); // send CC on
+                    this->lastNote = CC;
+                }
 
                 try
                 { // compute the time at which the note off will be sent,
@@ -90,9 +100,16 @@ void EQSEQ::clock(long long ts) // triggered every 100 microseconds (1/10 ms)
 {
     if (!this->_ready)
         return;
-    if (ts - this->__OFF > 0 && this->__OFF > 0) // send note off
+    if (ts - this->__OFF > 0 && this->__OFF > 0) // send note off or cc reset
     {
-        this->sendNote(0x80, this->ch - 1, this->lastNote, 0);
+        if (this->mode <= 1)
+            this->sendNote(0x80, this->ch - 1, this->lastNote, 0);
+
+        if (this->mode > 1 && this->lastNote > 0 && this->lastNote < 120)
+        { // cc
+
+            this->sendNote(0xB0, this->ch - 1, this->lastNote, this->vel); // reset cc
+        }
         this->__OFF = 0; // reset note off time
     }
 }
@@ -189,19 +206,48 @@ void EQSEQ::killHanging() // stops any playing note used before any operation th
 {
     if (this->__OFF > 0)
     {
-        this->sendNote(0x80, this->ch - 1, this->lastNote, 0); // kill hanging notes
+        if (this->mode <= 1)
+            this->sendNote(0x80, this->ch - 1, this->lastNote, 0); // kill hanging notes
+        if (this->mode > 1)
+            this->sendNote(0xB0, this->ch - 1, this->lastNote, this->vel); // kill hanging notes
+
         this->__OFF = 0;
     }
 }
 int EQSEQ::getVel() // computes step velocity based on base velocity and humanization factor.
 {
-    if (this->velh == 0)
-        return this->vel;
+    if (this->mode <= 1) // note mode
+    {                    // note mode
+        if (this->velh == 0)
+            return this->vel;
 
-    srand(time(NULL));
-    int mul = ((rand() % 10)) % 2 == 0 ? 1 : -1;
-    int add = this->velh > 0 ? rand() % this->velh : 0;
-    return limit(this->vel + (add * mul), 10, 127);
+        srand(time(NULL));
+        //        int mul = ((rand() % 10)) % 2 == 0 ? 1 : -1;
+        int add = this->velh > 0 ? rand() % this->velh : 0;
+        return limit(this->vel + add, 0, 127);
+    }
+    if (this->mode == 2)
+    {
+        if (this->velh == 0)
+            return this->vel;
+        return limit(this->velh, 1, 127);
+    }
+
+    { // mode 2  random cc
+        if (this->velh == 0)
+            return this->vel;
+        srand(time(NULL));
+        int max = std::max(this->vel, this->velh);
+        int min = std::min(this->vel, this->velh);
+        int diff = (max - min);
+        int val = min + (rand() % diff);
+        while (diff > 10 && std::abs(val - diff) < 5)
+        {
+            val = min + (rand() % diff);
+        }
+        // int add = this->velh > 0 ? rand() % this->velh : 0;
+        return limit(val, 0, 127);
+    }
 }
 
 int EQSEQ::limit(int v, int min, int max) // Restricts an interger value between limits
@@ -221,4 +267,13 @@ void EQSEQ::setGATE(int value) // set note duration (10-95%)
     if (wasEnabled)
         this->enabled = true;
     this->killHanging();
+}
+void EQSEQ::setMode(unsigned char _mode)
+{
+    _mode = limit(_mode, 1, 3);
+    if (_mode == this->mode)
+        return;
+    this->killHanging();
+
+    this->mode = _mode;
 }

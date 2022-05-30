@@ -27,6 +27,7 @@ private:
     int getVel();
     int limit(int v, int min, int max);
     long long sstep = 0;
+    int lastRandVal = 0;
 
 public:
     int steps = 16;
@@ -41,6 +42,7 @@ public:
     int octave = 0;
     int vel = 96;
     int velh = 0;
+    unsigned char mode = 1;
     bool clockSync = true;
     bool enabled = false;
     void update();
@@ -49,6 +51,7 @@ public:
     void reset();
     EQSEQ();
     void setBPM(float newbpm);
+    void setMode(unsigned char _mode);
     void setGATE(int value);
     void clock(long long ts);
     void tick(long long _tick, long long ts);

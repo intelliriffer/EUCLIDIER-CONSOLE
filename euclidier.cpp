@@ -30,16 +30,17 @@ long long getUS();
 void sendTicks();
 void clear();
 bool velSense = true;
+bool receiveNotes = true;
 float BPM = 120.00;
 int getOffset();
 void clockStop();
 unsigned long long now();
 unsigned long long ms();
 unsigned long long BOOT_TIME;
-const bool CONNECT_AKAI_NETWORK = false; // automatically connevt to akai network remote port
-const char STEPMAX = 64;                 // number of max steps and pulses
-const char VEL_SENSE_MIN = 22;
-const char VEL_SENSE_MAX = 127;
+const bool CONNECT_AKAI_NETWORK = true; // automatically connevt to akai network remote port
+const unsigned char STEPMAX = 64;       // number of max steps and pulses
+const unsigned VEL_SENSE_MIN = 22;
+const unsigned VEL_SENSE_MAX = 127;
 
 long long tick = 0;
 
@@ -54,7 +55,7 @@ RtMidiIn *midiIn = 0;
 RtMidiIn *HWIN = 0;
 RtMidiOut *midiOut = 0;
 
-const char SEQS = 8;
+const unsigned char SEQS = 8;
 
 EQSEQ *SQ = new EQSEQ[8]; // creante the 8 track sequencer in an array
 int main()
@@ -141,7 +142,7 @@ int main()
         long long us = getUS();
         if (started)
         {
-            for (int i = 0; i < SEQS; i++)
+            for (char i = 0; i < SEQS; i++)
             {
                 SQ[i].clock(us);
             }
@@ -181,27 +182,30 @@ void clear()
 void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*userData*/) // handles incomind midi
 {
 
-    char byte0 = (int)message->at(0);
-    char typ = byte0 & 0xF0;
+    unsigned char byte0 = (int)message->at(0);
+    unsigned char typ = byte0 & 0xF0;
     uint size = message->size();
+    // cout << "message " << byte0 << endl;
 
     if (size == 1) // system realtime message
     {
         handleClockMessage(message->at(0));
         return;
     }
-    if (typ == 0x90) // note message
+    if (typ == 0x90 && receiveNotes) // note message
     {
-        char note = (int)message->at(1);
-        char VAL = (int)message->at(2);
+        unsigned char note = (int)message->at(1);
+        unsigned char VAL = (int)message->at(2);
+
         if (VAL < 1) // disregard notes with velocity less than 10
             return;
-        char oct = note / 12;
-        char xpose = note % 12;
+        unsigned char oct = note / 12;
+        unsigned char xpose = note % 12;
         if (oct < 8) // xpose tracks 1-8 {}
         {
-            char targetCC = (oct * 10) + 2;
-            char ooct = 0;
+
+            unsigned targetCC = (oct * 10) + 2;
+            unsigned ooct = 0;
             if (velSense)
             {
                 ooct = VAL < VEL_SENSE_MIN ? -1 : 0;
@@ -231,6 +235,7 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
     if (typ == 0xB0) // cc message
     {
 
+        // cout << "CC" << endl;
         /*
         params
         enabled: true/false
@@ -242,14 +247,14 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
         gate : 10-95%
         */
 
-        char CC = (int)message->at(1);
-        char VAL = (int)message->at(2);
-        char ch = byte0 & 0x0F;
-        char trk = CC / 10;
-        char cmd = CC % 10;
+        unsigned char CC = (int)message->at(1);
+        unsigned char VAL = (int)message->at(2);
+        unsigned char ch = byte0 & 0x0F;
+        unsigned char trk = CC / 10;
+        unsigned char cmd = CC % 10;
         if (CC == 100 && VAL > 0 && VAL % 2 == 0)
         {
-            for (int i = 0; i < SEQS; i++)
+            for (unsigned char i = 0; i < SEQS; i++)
             {
 
                 SQ[i].octave = 0;
@@ -258,18 +263,25 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
 
             return;
         }
-        if (CC == 119 && VAL % 2 == 0)
+        if (CC == 119)
         {
             bool wasActive = velSense;
-            velSense = VAL >= 64;
+            velSense = limit(VAL, 0, 1);
             if (!velSense && wasActive) // reset the octaves
             {
-                for (char i = 0; i < SEQS; i++)
+                for (unsigned char i = 0; i < SEQS; i++)
                 {
 
                     SQ[i].octave = 0;
                 }
             }
+
+            return;
+        }
+        if (CC == 99) // receive notes
+        {
+
+            receiveNotes = limit(VAL, 0, 1);
 
             return;
         }
@@ -352,12 +364,17 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
             }
             if (trk == 9 && cmd > 0 && cmd <= 8) // velocity humanization messages
             {
-                SQ[cmd - 1].velh = limit(VAL, 0, 50);
+                SQ[cmd - 1].velh = VAL;
             }
             if (trk == 10 && cmd > 0 && cmd <= 8) // loop steps 1-64
             {
                 //  cout << "loop" << endl;
                 SQ[cmd - 1].loop = limit(VAL, 0, 64); // 0=off
+            }
+            if (trk == 11 && cmd > 0 && cmd <= 8) // set Modes 1-3
+            {
+
+                SQ[cmd - 1].setMode(VAL); // 0=off
             }
         }
     }
@@ -465,7 +482,7 @@ void pulse() // used to compute bpm and send clock message to sequencer for sync
     }
 
     double avg = 0;
-    char cnt = 0;
+    unsigned cnt = 0;
     for (uint i = 1; i < pulses.size(); i++)
     {
         double msd = pulses.at(i) - pulses.at(i - 1);
