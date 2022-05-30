@@ -1,7 +1,7 @@
-# Euclidier - 8 Channel Midi Euclidean Note Sequencer for Force/MPC Beta 0.1.5
+# Euclidier - 8 Channel Midi Euclidean Note Sequencer for Force/MPC Beta 0.1.6
 
-## Download Latest Binaries 0.1.5
-1. [Akai Force, Akai MPC & Raspberry Pi](https://mega.nz/file/p1QgSRpQ#nwKGXLt4yjmty5pK4DfNT3gu3gXPIbFea5-Hh4nf6og)
+## Download Latest Binaries 0.1.6
+1. [Akai Force, Akai MPC & Raspberry Pi](https://mega.nz/file/t1R3CT7A#xDu9hfJSUfS5sj4c75NDMoXO4TSXmhUpW7uGY8az7yo)
 
 
 ## Features:
@@ -12,13 +12,36 @@
 5. Velocity + Velocity Humanization / Channel  (Adds/Subtracts values up defined (max 32) from Base Velocity).
 6. Sequence Shifting (Offset)
 7. Different Note/Time Divisions per channel.
-8. Will run on Force and Raspberry Pi
-9. ** v 0.1.4 Added Loop Parameter, Loop Parameter Sets the Sequence Restart Point. Values > Steps Creates Polythythms 
-10. ** 0.1.5
+8. CC Sequncing : *See Below
+9. Realtime Note Based Transpostion
+10. Will run on Force and Raspberry Pi
+11. ** v 0.1.4 Added Loop Parameter, Loop Parameter Sets the Sequence Restart Point. Values > Steps Creates Polythythms 
+12. ** 0.1.5
     1. Added Realtime Note Triggered Transpostion - See below for details.
     2. Extended Steps to 2-64
     
-11. New Midi Mapping Layout with Loop Controls added
+13. New Midi Mapping Layout with Loop Controls added
+14. *** 0.1.6 New Killer Features
+    1.  Velocity Sense (Default On) : Note Octave will be Shifted based on Incoming Note Velocities
+        1.  Velocity < 22 : Octave -1
+        2.  Velocity 23 - 126 : octave 0 (As the Orginal Note)
+        3.  Velocity 127 : octave +1, Notes will wrap if beyong range;
+    2.  CC Sequencing : Any Track can Now be configured as Note Track or a CC.
+        1.  Mode Value :1 => Note Track
+        2.  Mode Value: 2 => CC Track For Each Trigger CC same as Note Parameter Will be Triggered with Value of "VALUE ALT" and after Gate Duration Default "BASE VALUE" will be trigged. in a Nutshell It will strigger two different CC values.
+        3.  Mode Value: 3 A Random Value Between "BASE VALUE" and "VALUE ALT" will be Triggered, after Gate Duration Default "BASE VALUE" will be trigged.
+        4.  By Enabling Control on Euclidier Midi Port and only Soloing the CC Track, you can midi learn the cc and then apply to any automatable parameter on Force tracks/fx/ or send to External MIDI/CV.
+    3.  Custom Progresisons (Chord Pads) Support : I have hand Created Few Progression files that you can load on your Akai Force/MPC and can use to send some triad chords to Euclidier to create chord stabs or quick custom apreggios (Majors,Minors and Sus4 Chords.) Please Refer to included Readme.txt with the Chords.
+    4.  Parameter Names have been changed on Midi Track Template to Make it Easier.
+    5.  Some Memory Optimizations (more will come later).
+    6.  Added Midi CC/ Params for :
+        1.  Reset Octave and any Transpose Applied (All Tracks).
+        2.  Vel Sense:
+            1.  0: OFF, Will not change octaves based on incoming note velocity.
+            2.  1: ON, Will Change octaves based on incoming note velocity.
+        3.  RECEIVE NOTES : (0-1) : Switches Realtime Note Input Respose Off/On.
+        
+
 
 
 ## Installation: 
@@ -47,6 +70,7 @@ or if using Mockba/Kick Gen Mod, you can put in a launch script in their respect
 8. On Control track enable channels 5-8 (pages3-4) (5 = kick)
 
 ## Midi Mapping :
+
     1. CC: 1,11,21,31,41,51,61,71 : Enable Channels (1-8 Respectively) value > 64 = on
 
     2. CC: 2,12,22,32,42,52,62,72 :  Set Pitch / Note for Channels (1-8) Values 0-127
@@ -73,11 +97,26 @@ or if using Mockba/Kick Gen Mod, you can put in a launch script in their respect
 
     8. CC:8,18,28,38,48,58,68,78 : Sequence Output Midi Channel (1-16)
 
-    9.  CC: 81,82,83,84,85,86,87,88 : Set Base Velocity of the Channel, default 96
+    9.  CC: 81,82,83,84,85,86,87,88 : Set Base Value for (Velocity or CC) For the Channel, default 96
 
-    10. CC: 91,92,93,94,95,96,97,98 : Set Velocity Humanization value 0-36 a Random Amount up to the value gets added or subtracted to Base Velocity. Default:0
+    10. CC: 91,92,93,94,95,96,97,98 : Set "VALUE ALT"  (For notes 0-50) (for CC : 0-100 0 is disabled)
+        1.  In Note Mode (0-127) a Random Amount between (0-VALUE ALT) is Added to BASE VALUE.
+        2.  In CC Mode 1: Each Active Step Sends CC with VALUE ALT and Reverts back to BASE VALUE after Step/Gate Duration.
+        3.  in CC Mode 2: Each Active Step Sends the CC with a "Random Value" between BASE VALUE and BALUE ALT. It Reverts back to BASE VALUE after Step/Gate Duration.
+
     11. CC: 101,102,103,104,105,106,107,108 : Set LOOP Steps (Restart Point) 0=off, the Sequence Restarts at its Number of steps. 1-64 : The sequnce will play cyclickly until Loop Point number of steps have been played and then will restart. Values < steps , will shorten the playing sequence pattern.
-    12. Track  Note Transposition (Transposition if ) (Adds to Track Note Value)
+
+    12. CC: 111,112,113,114,115,116,117,118 : Set Track Modes Between
+        1.   1: Note,
+        2.   2: CC1
+        3.   3: CC2
+    
+    13. Global Modifiers
+        1.  CC 99:  (0-1): Receive Notes
+        2.  CC 100: (any positive value) : Reset  Any Note transposition and Octave offsets from all Tracks.
+        3.  CC 119: Disable Octave Switching on incoming Note Velocity (you dont want it with drums etc) 
+
+    14. Track  Note Transposition (Transposition if ) (Adds to Track Note Value)
         1.  Notes 0-11 (c-2) : Transpose Track 1 by +(0-11)
         2.  Notes 12-23 (c-1): Transpose Track 2 by +(0-11)
         3.  Notes 24-35 (c0) : Transpose Track 3 by +(0-11)
@@ -86,6 +125,12 @@ or if using Mockba/Kick Gen Mod, you can put in a launch script in their respect
         6.  Notes 60-71 (c3) : Transpose Track 6 by +(0-11)
         7.  Notes 72-83 (c4) : Transpose Track 7 by +(0-11)
         8.  Notes 84-95 (c5) : Transpose Track 8 by +(0-11)
+
+    15.  Notes: 96-103 : Reset Octave shifts on Tracks 1-8 respectively
+    16.  Notes: 108-115 : Apply +1 Octave Shift to tracks 1-8 respectively.
+    17.  Notes: 120-127 : Apply -1 Octave Shift to tracks 1-8 respectively.
+
+
 
 ## Building from Source
 ** To use on MPC/Force you must have SSH Access (Firmware Mod)
@@ -106,9 +151,47 @@ copy the generated bin/euclidier file to your Force/MPC and run from ssh
    1. You can use Realtime Transpostion to build Custom Arpeggios/Sequences.
    2. By setting each channel to same note (octaves can be different) You can send In scale notes (as transpose parameter) to each channel to  create pattern variations. 
    3. Setting notes and pattern to same but sending different transpose values, you can create custom chord stab patterns.
+
+     
+
  
 
 
+ **0.1.6 Release Notes**
+
+     1.  Velocity Sense (Default On) : Note Octave will be Shifted based on Incoming Note Velocities
+        1.  Velocity < 22 : Octave -1
+        2.  Velocity 23 - 126 : octave 0 (As the Orginal Note)
+        3.  Velocity 127 : octave +1, Notes will wrap if beyong range;
+    2.  CC Sequencing : Any Track can Now be configured as Note Track or a CC.
+        1.  Mode Value :1 => Note Track
+        2.  Mode Value: 2 => CC Track For Each Trigger CC same as Note Parameter Will be Triggered with Value of "VALUE ALT" and after Gate Duration Default "BASE VALUE" will be trigged. in a Nutshell It will strigger two different CC values.
+        3.  Mode Value: 3 A Random Value Between "BASE VALUE" and "VALUE ALT" will be Triggered, after Gate Duration Default "BASE VALUE" will be trigged.
+        4.  By Enabling Control on Euclidier Midi Port and only Soloing the CC Track, you can midi learn the cc and then apply to any automatable parameter on Force tracks/fx/ or send to External MIDI/CV.
+    3.  Custom Progresisons (Chord Pads) Support : I have hand Created Few Progression files that you can load on your Akai Force/MPC and can use to send some triad chords to Euclidier to create chord stabs or quick custom apreggios (Majors,Minors and Sus4 Chords.) Please Refer to included Readme.txt with the Chords.
+    4.  Parameter Names have been changed on Midi Track Template to Make it Easier.
+    5.  Some Memory Optimizations (more will come later).
+    6.  Added Midi CC/ Params for :
+        1.  Reset Octave and any Transpose Applied (All Tracks).
+        2.  Vel Sense:
+            1.  0: OFF, Will not change octaves based on incoming note velocity.
+            2.  1: ON, Will Change octaves based on incoming note velocity.
+        3.  RECEIVE NOTES : (0-1) : Switches Realtime Note Input Respose Off/On.
+        
+
+
+# Tips/How To's:
+### Simple 3/4 against 4/4
+1. Track 1
+   1. Steps : 4
+   2. Fill  : 1
+2. Track 2
+   1. Steps : 3
+   2. Fill  : 1
+
+3. 3.Things to Try,  For Longer, Just multiply the value the values. and try setiing up loop few steps more than total steps.
+
+### [<<< Refernce & World Rhythms >>](http://cgm.cs.mcgill.ca/~godfried/publications/banff.pdf)
 
 
 

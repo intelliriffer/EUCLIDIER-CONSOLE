@@ -37,8 +37,8 @@ void clockStop();
 unsigned long long now();
 unsigned long long ms();
 unsigned long long BOOT_TIME;
-const bool CONNECT_AKAI_NETWORK = true; // automatically connevt to akai network remote port
-const unsigned char STEPMAX = 64;       // number of max steps and pulses
+const bool CONNECT_AKAI_NETWORK = false; // automatically connevt to akai network remote port
+const unsigned char STEPMAX = 64;        // number of max steps and pulses
 const unsigned VEL_SENSE_MIN = 22;
 const unsigned VEL_SENSE_MAX = 127;
 
@@ -194,15 +194,18 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
     }
     if (typ == 0x90 && receiveNotes) // note message
     {
-        unsigned char note = (int)message->at(1);
-        unsigned char VAL = (int)message->at(2);
 
+        unsigned char VAL = (int)message->at(2);
         if (VAL < 1) // disregard notes with velocity less than 10
             return;
+        unsigned char note = (int)message->at(1);
+
         unsigned char oct = note / 12;
         unsigned char xpose = note % 12;
         if (oct < 8) // xpose tracks 1-8 {}
         {
+            if (SQ[oct].mode > 1)
+                return;
 
             unsigned targetCC = (oct * 10) + 2;
             unsigned ooct = 0;
@@ -213,21 +216,21 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
             }
             SQ[oct].octave = ooct;
             SQ[oct].xpose = xpose;
-            //  cout << "xpose for trk " << oct << ": " << xpose << endl;
         }
+        if (xpose < 8 && SQ[xpose].mode > 1)
+            return;
+
         if (oct == 8 && xpose < 8) // 96-103
         {
             SQ[xpose].octave = 0;
-            // cout << "oct reset for trk" << xpose << " " << 0 << endl;
         }
         if (oct == 9 && xpose < 8) // 108-115
         {
             SQ[xpose].octave = 1;
-            //   cout << "oct for trk" << xpose << " " << 1 << endl;
         }
         if (oct == 10 && xpose < 8) // 127-127
         {
-            //   cout << "oct for trk" << xpose << " " << -1 << endl;
+
             SQ[xpose].octave = -1;
         }
     }
