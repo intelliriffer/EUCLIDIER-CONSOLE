@@ -313,6 +313,8 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
                 SQ[trk].updateSeq();
                 if (SQ[trk].enabled)
                     resync(true);
+                else
+                    printAll();
 
                 break;
 
@@ -322,6 +324,8 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
                 SQ[trk].updateSeq();
                 if (SQ[trk].enabled)
                     resync(true);
+                else
+                    printAll();
                 break;
             case 6:
 
@@ -329,6 +333,8 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
                 SQ[trk].updateSeq();
                 if (SQ[trk].enabled)
                     resync(true);
+                else
+                    printAll();
                 break;
             case 7:
 
@@ -373,6 +379,7 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
             {
                 //  cout << "loop" << endl;
                 SQ[cmd - 1].loop = limit(VAL, 0, 64); // 0=off
+                printAll();
             }
             if (trk == 11 && cmd > 0 && cmd <= 8) // set Modes 1-3
             {

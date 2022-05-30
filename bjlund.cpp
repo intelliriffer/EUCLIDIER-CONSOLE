@@ -135,7 +135,27 @@ void BJLUND::printResults(vector<int> &vect)
     cout << "  ";
     for (vector<int>::size_type j = 0; j != vect.size(); j++)
     {
-        char c = vect[j] ? 'x' : '.';
+        // char c = vect[j] ? 'x' : '.';
+        char c = '.';
+        switch (vect[j])
+        {
+        case 1:
+            c = 'X';
+            break;
+        case 2:
+            c = 'x';
+            break;
+        case 3:
+            c = ':';
+            break;
+        case 4:
+            c = '|';
+            break;
+        case 5:
+            c = ',';
+            break;
+        }
+
         cout << c << " ";
     }
     cout << endl;

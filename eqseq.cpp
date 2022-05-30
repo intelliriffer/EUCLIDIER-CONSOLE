@@ -13,6 +13,7 @@ EQSEQ::EQSEQ()
 }
 void EQSEQ::updateSeq()
 {
+
     this->_step = 0;
     this->SEQ = BJLUND::bjlund(this->pulses, this->steps); // generate sequence
     if (this->shift > 0)                                   // rotate sequence
@@ -20,11 +21,48 @@ void EQSEQ::updateSeq()
         int shift = this->shift > this->SEQ.size() ? this->shift % this->SEQ.size() : this->shift;
         std::rotate(this->SEQ.begin(), this->SEQ.begin() + this->SEQ.size() - shift, this->SEQ.end());
     }
+
     this->_step = 0;
 }
 void EQSEQ::print()
 {
-    BJLUND::printResults(this->SEQ);
+    vector<int> PSEQ;
+    if (this->loop == 0 || this->loop == this->steps)
+    {
+        for (vector<int>::size_type i = 0; i != this->SEQ.size(); i++)
+        {
+            PSEQ.push_back(this->SEQ.at(i));
+        }
+        PSEQ.push_back(4);
+        BJLUND::printResults(PSEQ);
+        return;
+    }
+    int lps = this->loop / this->steps;
+    for (int l = 0; l != (lps); l++)
+    {
+        for (vector<int>::size_type i = 0; i != this->SEQ.size(); i++)
+        {
+            if (l == 0)
+            {
+                PSEQ.push_back(this->SEQ.at(i));
+            }
+            else
+            {
+                PSEQ.push_back(this->SEQ.at(i) ? 2 : 5);
+            }
+
+            if (i == this->loop - 1 && this->loop < this->steps)
+            {
+                PSEQ.push_back(4); // loop point
+            }
+        }
+    }
+    for (int l = 0; l < this->loop % this->steps; l++)
+    {
+        PSEQ.push_back(this->SEQ.at(l) ? 2 : 5);
+    }
+    PSEQ.push_back(4);
+    BJLUND::printResults(PSEQ);
 }
 
 void EQSEQ::setBPM(float newbpm)
