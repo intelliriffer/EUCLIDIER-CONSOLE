@@ -22,13 +22,14 @@ void listInports();
 uint getinPort(std::string str);
 uint getOutPort(std::string str);
 void doTempo();
-void handleClockMessage(int message);
+void handleClockMessage(unsigned char message);
 void pulse();
 void updateBPM(float bpm);
 void clockStart();
 long long getUS();
 void sendTicks();
 void clear();
+bool velSense = true;
 float BPM = 120.00;
 int getOffset();
 void clockStop();
@@ -36,7 +37,9 @@ unsigned long long now();
 unsigned long long ms();
 unsigned long long BOOT_TIME;
 const bool CONNECT_AKAI_NETWORK = false; // automatically connevt to akai network remote port
-const int STEPMAX = 64;                  // number of max steps and pulses
+const char STEPMAX = 64;                 // number of max steps and pulses
+const char VEL_SENSE_MIN = 22;
+const char VEL_SENSE_MAX = 127;
 
 long long tick = 0;
 
@@ -51,7 +54,7 @@ RtMidiIn *midiIn = 0;
 RtMidiIn *HWIN = 0;
 RtMidiOut *midiOut = 0;
 
-const int SEQS = 8;
+const char SEQS = 8;
 
 EQSEQ *SQ = new EQSEQ[8]; // creante the 8 track sequencer in an array
 int main()
@@ -178,29 +181,32 @@ void clear()
 void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*userData*/) // handles incomind midi
 {
 
-    int byte0 = (int)message->at(0);
-    int typ = byte0 & 0xF0;
+    char byte0 = (int)message->at(0);
+    char typ = byte0 & 0xF0;
     uint size = message->size();
 
     if (size == 1) // system realtime message
     {
-        handleClockMessage((int)message->at(0));
+        handleClockMessage(message->at(0));
         return;
     }
     if (typ == 0x90) // note message
     {
-        int note = (int)message->at(1);
-        int VAL = (int)message->at(2);
+        char note = (int)message->at(1);
+        char VAL = (int)message->at(2);
         if (VAL < 1) // disregard notes with velocity less than 10
             return;
-        int oct = note / 12;
-        int xpose = note % 12;
+        char oct = note / 12;
+        char xpose = note % 12;
         if (oct < 8) // xpose tracks 1-8 {}
         {
-            int targetCC = (oct * 10) + 2;
-            int ooct = 0;
-            ooct = VAL < 20 ? -1 : 0;
-            ooct = VAL == 127 ? 1 : ooct;
+            char targetCC = (oct * 10) + 2;
+            char ooct = 0;
+            if (velSense)
+            {
+                ooct = VAL < VEL_SENSE_MIN ? -1 : 0;
+                ooct = VAL >= VEL_SENSE_MAX ? 1 : ooct;
+            }
             SQ[oct].octave = ooct;
             SQ[oct].xpose = xpose;
             //  cout << "xpose for trk " << oct << ": " << xpose << endl;
@@ -236,11 +242,11 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
         gate : 10-95%
         */
 
-        int CC = (int)message->at(1);
-        int VAL = (int)message->at(2);
-        int ch = byte0 & 0x0F;
-        int trk = CC / 10;
-        int cmd = CC % 10;
+        char CC = (int)message->at(1);
+        char VAL = (int)message->at(2);
+        char ch = byte0 & 0x0F;
+        char trk = CC / 10;
+        char cmd = CC % 10;
         if (CC == 100 && VAL > 0 && VAL % 2 == 0)
         {
             for (int i = 0; i < SEQS; i++)
@@ -248,6 +254,21 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
 
                 SQ[i].octave = 0;
                 SQ[i].xpose = 0;
+            }
+
+            return;
+        }
+        if (CC == 119 && VAL % 2 == 0)
+        {
+            bool wasActive = velSense;
+            velSense = VAL >= 64;
+            if (!velSense && wasActive) // reset the octaves
+            {
+                for (char i = 0; i < SEQS; i++)
+                {
+
+                    SQ[i].octave = 0;
+                }
             }
 
             return;
@@ -361,7 +382,7 @@ int limit(int v, int min, int max)
 }
 void resync(bool print) // after parameter update , set all sequences to step 0 so they are in sync
 {
-    for (int i = 0; i < SEQS; i++)
+    for (char i = 0; i < SEQS; i++)
     {
 
         SQ[i].reset();
@@ -410,7 +431,7 @@ uint getOutPort(std::string str)
     return 99;
 }
 
-void handleClockMessage(int message)
+void handleClockMessage(unsigned char message)
 {
 
     // cout << "message: " << (int)message << endl;
@@ -444,7 +465,7 @@ void pulse() // used to compute bpm and send clock message to sequencer for sync
     }
 
     double avg = 0;
-    int cnt = 0;
+    char cnt = 0;
     for (uint i = 1; i < pulses.size(); i++)
     {
         double msd = pulses.at(i) - pulses.at(i - 1);
@@ -490,7 +511,7 @@ void updateBPM(float bpm) // sends the computed bpm to all sequencers
     if (isinf(bpm))
         return;
 
-    for (int i = 0; i < SEQS; i++)
+    for (char i = 0; i < SEQS; i++)
     {
         SQ[i].setBPM(bpm);
     }
