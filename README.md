@@ -51,7 +51,7 @@
 or if using Mockba/Kick Gen Mod, you can put in a launch script in their respective autolaunch directors to launch this in background on Startup.
 
 ## Notes:
-1. If you change Steps, Pulses, Shift parameters or enable a channel , you need to start and stop Force playback to sync the sequences. (I may update this later on to auto sync once I figure out the best way)
+1. If you change Steps, Fills, Shift parameters, time division , you need to start and stop Force playback to sync the sequences. (I may update this later on to auto sync once I figure out the best way)
 
 2. There is No GUI (I may create web Gui later on ), but a Force Track Template is provided Will all parameters named and Mapped.
 4: The Last 4 channels are Defaulted to ch 10,  with notes and simple pattern set for a Drum Kit.
@@ -89,7 +89,7 @@ or if using Mockba/Kick Gen Mod, you can put in a launch script in their respect
 
     4. CC: 4,14,24,34,44,54,69,74 : Set Sequence Length in steps Values (2-64).
 
-    5. CC: 5,15,25,35,45,55,65,75 : Set Pulse (2-32) Pulse are The Number of Filled Steps that will be spread over the Sequence. if Pulse > Steps , All steps will be enabled.
+    5. CC: 5,15,25,35,45,55,65,75 : Set Fill (2-32) Fill are The Number of Filled Steps that will be spread over the Sequence. if Fill > Steps , All steps will be enabled.
 
     6. CC: 6,16,26,36,46,56,66,76 : Set Sequence Shift Values 0-32 . Sets the Sequence Offset, values greater and sequence length Keep Rotating. for example Shift of 3 will move all steps 3 steps towards right and out of bounds will wrap around. 
 
@@ -146,7 +146,7 @@ copy the generated bin/euclidier file to your Force/MPC and run from ssh
 **V.0.1.5 Release Notes**
 1. Added New time divisions
 2. Number of Steps changes from 4-32 to 2-64
-3. Number of pulses changed from 1-32 to 1-64
+3. Number of Fills changed from 1-32 to 1-64
 4. Added Realtime Note Tansposition (Midi Clips can be used to automate).
    1. You can use Realtime Transpostion to build Custom Arpeggios/Sequences.
    2. By setting each channel to same note (octaves can be different) You can send In scale notes (as transpose parameter) to each channel to  create pattern variations. 
