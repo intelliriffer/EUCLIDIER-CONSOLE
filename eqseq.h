@@ -40,15 +40,20 @@ public:
     int note = 60;
     int xpose = 0;
     int octave = 0;
+    bool autosync = 1;
     int vel = 96;
     int velh = 0;
+    int master = 3;
     unsigned char mode = 1;
     bool clockSync = true;
     bool enabled = false;
     void update();
+
     void updateSeq();
     void print();
-    void reset();
+    void reset(bool force);
+    void sync();
+
     EQSEQ();
     void setBPM(float newbpm);
     void setMode(unsigned char _mode);

@@ -9,6 +9,7 @@
 #include <ctime>
 #include "RtMidi.h"
 #include <math.h>
+#include <algorithm>
 using namespace std;
 using std::chrono::duration_cast;
 using std::chrono::high_resolution_clock;
@@ -26,17 +27,22 @@ void handleClockMessage(unsigned char message);
 void pulse();
 void updateBPM(float bpm);
 void clockStart();
+bool pendingSync = false;
 long long getUS();
 void sendTicks();
 void clear();
 bool velSense = true;
 bool receiveNotes = true;
+bool autosync = true;
 float BPM = 120.00;
 int getOffset();
+unsigned char syncDiv = 4;
+
 void clockStop();
 unsigned long long now();
 unsigned long long ms();
 unsigned long long BOOT_TIME;
+unsigned long long sstep;                // sequence step
 const bool CONNECT_AKAI_NETWORK = false; // automatically connevt to akai network remote port
 const unsigned char STEPMAX = 64;        // number of max steps and pulses
 const unsigned VEL_SENSE_MIN = 22;
@@ -49,11 +55,37 @@ int limit(int v, int min, int max);
 bool paused = false;
 bool started = false;
 void printAll(bool _clear);
-void resync(bool print);
+void resync(bool force, bool print);
+void updateSteps(unsigned char trk, unsigned char VALUE);
+void updatePulse(unsigned char trk, unsigned char VALUE);
+void updateShift(unsigned char trk, unsigned char VALUE);
+void updateLoop(unsigned char trk, unsigned char VALUE);
+void updateDiv(unsigned char trk, unsigned char VALUE);
 
 RtMidiIn *midiIn = 0;
 RtMidiIn *HWIN = 0;
 RtMidiOut *midiOut = 0;
+enum syncTypes
+{
+    STEP,
+    PULSE,
+    SHIFT,
+    LOOP,
+    DIV
+};
+struct syncMessage
+{
+    unsigned char CC;
+    unsigned char TRACK;
+    unsigned char VALUE;
+    syncTypes TYPE; // 0=step,1=pulse, 2 loop,3=div
+};
+void queCC(unsigned char CC, unsigned char TRK, unsigned char VALUE, syncTypes type);
+vector<syncMessage> QUEUE;
+vector<syncMessage> WAIT_QUEUE;
+void processMessage(syncMessage M);
+void processQ();
+bool QPROCESSING = false;
 
 const unsigned char SEQS = 8;
 
@@ -288,6 +320,24 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
 
             return;
         }
+        if (CC == 80) // autosync
+        {
+
+            for (unsigned char i = 0; i < SEQS; i++)
+            {
+
+                SQ[i].autosync = limit(VAL, 0, 1);
+            }
+
+            return;
+        }
+        if (CC == 70) // resync
+        {
+
+            resync(true, true);
+
+            return;
+        }
 
         if (trk < 8) // if sequncer track messages
         {
@@ -303,38 +353,55 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
                 break;
 
             case 3:
-                SQ[trk].updateDiv(limit(VAL, 1, 10));
+                //  SQ[trk].updateDiv(limit(VAL, 1, 10));
+                if (!started)
+                {
+                    updateDiv(trk, VAL);
+                    SQ[trk].updateSeq();
+                    printAll();
+                    return;
+                }
+                queCC(CC, trk, VAL, DIV);
+                return;
+
                 break;
 
             case 4:
                 if (trk == 6) // ignore cc 64
                     break;
-                SQ[trk].steps = limit(VAL, 2, STEPMAX);
-                SQ[trk].updateSeq();
-                if (SQ[trk].enabled)
-                    resync(true);
-                else
+                if (!started)
+                {
+                    updateSteps(trk, VAL);
+                    SQ[trk].updateSeq();
                     printAll();
+                    return;
+                }
+                queCC(CC, trk, VAL, STEP);
 
                 break;
 
             case 5:
-                SQ[trk].pulses = limit(VAL, 1, STEPMAX);
 
-                SQ[trk].updateSeq();
-                if (SQ[trk].enabled)
-                    resync(true);
-                else
+                if (!started)
+                {
+                    updatePulse(trk, VAL);
+                    SQ[trk].updateSeq();
                     printAll();
+                    return;
+                }
+                queCC(CC, trk, VAL, PULSE);
                 break;
+
             case 6:
 
-                SQ[trk].shift = limit(VAL, 0, STEPMAX);
-                SQ[trk].updateSeq();
-                if (SQ[trk].enabled)
-                    resync(true);
-                else
+                if (!started)
+                {
+                    updateShift(trk, VAL);
+                    SQ[trk].updateSeq();
                     printAll();
+                    return;
+                }
+                queCC(CC, trk, VAL, SHIFT);
                 break;
             case 7:
 
@@ -357,10 +424,15 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
                 }
                 if (trk == 6) // track 6 cc64
                 {
-                    SQ[trk].steps = limit(VAL, 2, STEPMAX);
-                    SQ[trk].updateSeq();
-                    if (SQ[trk].enabled)
-                        resync(true);
+                    if (!started)
+                    {
+                        updateSteps(trk, VAL);
+                        SQ[trk].updateSeq();
+                        printAll();
+                        return;
+                    }
+                    queCC(CC, trk, VAL, STEP);
+                    return;
                 }
             }
         }
@@ -407,12 +479,12 @@ int limit(int v, int min, int max)
         v = max;
     return v;
 }
-void resync(bool print) // after parameter update , set all sequences to step 0 so they are in sync
+void resync(bool force, bool print) // after parameter update , set all sequences to step 0 so they are in sync
 {
     for (char i = 0; i < SEQS; i++)
     {
 
-        SQ[i].reset();
+        SQ[i].reset(force);
     }
     if (print)
         printAll();
@@ -481,6 +553,11 @@ void pulse() // used to compute bpm and send clock message to sequencer for sync
 {
     sendTicks();
     tick += 1;
+    sstep++;
+
+    int ystep = tick == 0 ? 0 : (tick + 1) % ((24 * 4 / 4));
+    if (ystep == 0)
+        processQ();
 
     const uint mSize = 12; // fill up averaging buffer before computing final bpm;
     pulses.push_back(ms());
@@ -511,7 +588,8 @@ void clockStart()
               << "\n"
               << std::flush;
     tick = 0;
-    resync(true);
+    sstep = 0;
+    resync(true, true);
     started = true;
 }
 void clockStop()
@@ -520,7 +598,7 @@ void clockStop()
               << "\n"
               << std::flush;
     started = false;
-    resync(false);
+    resync(true, false);
 }
 
 unsigned long long now() // current time since epoch in ms
@@ -559,4 +637,113 @@ long long getUS() // gets time since epch in microseconds
     auto t1 = std::chrono::system_clock::now();
     long long us = duration_cast<microseconds>(t1.time_since_epoch()).count();
     return us;
+}
+
+void queCC(unsigned char CC, unsigned char TRK, unsigned char VALUE, syncTypes type)
+{
+    int index = -1;
+    syncMessage M = {.CC = CC, .TRACK = TRK, .VALUE = VALUE, .TYPE = type};
+
+    if (!QPROCESSING)
+    {
+        for (vector<syncMessage>::size_type i = 0; i != QUEUE.size(); i++)
+        {
+            if (QUEUE.at(i).CC == CC)
+            {
+                QUEUE.at(i).VALUE = VALUE;
+                return;
+            }
+        }
+
+        QUEUE.push_back(M);
+        return;
+    }
+    else // wait que
+    {
+        for (vector<syncMessage>::size_type i = 0; i != WAIT_QUEUE.size(); i++)
+        {
+            if (WAIT_QUEUE.at(i).CC == CC)
+            {
+                WAIT_QUEUE.at(i).VALUE = VALUE;
+                return;
+            }
+        }
+        WAIT_QUEUE.push_back(M);
+        return;
+    }
+}
+
+void updateSteps(unsigned char trk, unsigned char VALUE)
+{
+    SQ[trk].steps = limit(VALUE, 2, STEPMAX);
+}
+void updatePulse(unsigned char trk, unsigned char VALUE)
+{
+    SQ[trk].pulses = limit(VALUE, 1, STEPMAX);
+}
+void updateShift(unsigned char trk, unsigned char VALUE)
+{
+    SQ[trk].shift = limit(VALUE, 0, STEPMAX);
+}
+void updateLoop(unsigned char trk, unsigned char VALUE) {}
+void updateDiv(unsigned char trk, unsigned char VALUE)
+{
+    SQ[trk].updateDiv(limit(VALUE, 1, 10));
+}
+void processQ()
+{
+    QPROCESSING = true;
+    vector<unsigned char> updated;
+    for (vector<syncMessage>::size_type i = 0; i != QUEUE.size(); i++)
+    {
+        processMessage(QUEUE.at(i));
+        updated.push_back(QUEUE.at(i).TRACK);
+    }
+    QUEUE.clear();
+    QPROCESSING = false;
+    for (vector<syncMessage>::size_type i = 0; i != WAIT_QUEUE.size(); i++)
+    {
+        processMessage(WAIT_QUEUE.at(i));
+        updated.push_back(WAIT_QUEUE.at(i).TRACK);
+    }
+    WAIT_QUEUE.clear();
+    if (updated.size())
+    {
+        for (unsigned char i = 0; i != 8; i++)
+        {
+            if (std::find(updated.begin(), updated.end(), i) != updated.end())
+            {
+                SQ[i].updateSeq();
+            }
+        }
+
+        // SQ[trk].updateSeq();
+        resync(false, true);
+        // printAll();
+        //  send sync messages
+    }
+}
+void processMessage(syncMessage M)
+{
+    switch (M.TYPE)
+    {
+    case STEP:
+        updateSteps(M.TRACK, M.VALUE);
+        break;
+    case PULSE:
+        updatePulse(M.TRACK, M.VALUE);
+        break;
+
+    case LOOP:
+        updateLoop(M.TRACK, M.VALUE);
+        break;
+
+    case SHIFT:
+        updateShift(M.TRACK, M.VALUE);
+        break;
+
+    case DIV:
+        updateDiv(M.TRACK, M.VALUE);
+        break;
+    }
 }

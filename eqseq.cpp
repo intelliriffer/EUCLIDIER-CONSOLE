@@ -11,10 +11,19 @@ EQSEQ::EQSEQ()
     EQSEQ::updateSeq();
     this->_ready = true;
 }
+void EQSEQ::sync()
+{
+    int max = this->loop == 0 ? this->steps : std::min(this->steps, this->loop);
+    if (this->autosync || this->_step >= max)
+    {
+
+        this->_step = 0;
+        this->killHanging();
+    }
+}
 void EQSEQ::updateSeq()
 {
-
-    this->_step = 0;
+    this->sync();
     this->SEQ = BJLUND::bjlund(this->pulses, this->steps); // generate sequence
     if (this->shift > 0)                                   // rotate sequence
     {
@@ -22,7 +31,7 @@ void EQSEQ::updateSeq()
         std::rotate(this->SEQ.begin(), this->SEQ.begin() + this->SEQ.size() - shift, this->SEQ.end());
     }
 
-    this->_step = 0;
+    this->sync();
 }
 void EQSEQ::print()
 {
@@ -234,10 +243,16 @@ void EQSEQ::updateDiv(int div)
     this->div = div;
 }
 
-void EQSEQ::reset()
+void EQSEQ::reset(bool force)
 {
-    this->killHanging();
-    this->_step = 0;
+    if (force)
+    {
+        this->_step = 0;
+        this->killHanging();
+        return;
+    }
+
+    this->sync();
 }
 
 void EQSEQ::killHanging() // stops any playing note used before any operation that could cause stuck notes..
