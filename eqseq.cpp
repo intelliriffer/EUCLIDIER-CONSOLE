@@ -119,7 +119,7 @@ void EQSEQ::tick(long long _tick, long long ts) // tick is a midi clock pulse (2
                 try
                 { // compute the time at which the note off will be sent,
                     float _gate = (float)this->gate / 100;
-                    this->__OFF = ts + (long long)(interval * _gate) - 100; // remove 100 microseconds (master pulse)
+                    this->__OFF = ts + (long long)(interval * _gate) - OFF_US; // remove OFF_US microseconds (master pulse)
                 }
                 catch (std::exception &e)
                 {
@@ -199,7 +199,7 @@ int EQSEQ::getDiv() // return midi time division 1/16,1/4 etc based on midi rece
         div = 32;
         break;
     case 7:
-        div = 64;
+        div = 24; // dotted 32
         break;
     case 8: // dotted 16
         div = 12;

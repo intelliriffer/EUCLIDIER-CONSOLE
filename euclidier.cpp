@@ -36,7 +36,8 @@ bool receiveNotes = true;
 bool autosync = true;
 float BPM = 120.00;
 int getOffset();
-unsigned char syncDiv = 4;
+float syncDiv = 4;
+bool doSync = true;
 
 void clockStop();
 unsigned long long now();
@@ -61,7 +62,7 @@ void updatePulse(unsigned char trk, unsigned char VALUE);
 void updateShift(unsigned char trk, unsigned char VALUE);
 void updateLoop(unsigned char trk, unsigned char VALUE);
 void updateDiv(unsigned char trk, unsigned char VALUE);
-
+float getDiv(unsigned char d);
 RtMidiIn *midiIn = 0;
 RtMidiIn *HWIN = 0;
 RtMidiOut *midiOut = 0;
@@ -174,6 +175,8 @@ int main()
         long long us = getUS();
         if (started)
         {
+            if (!doSync)
+                processQ();
             for (char i = 0; i < SEQS; i++)
             {
                 SQ[i].clock(us);
@@ -337,6 +340,17 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
             resync(true, true);
 
             return;
+        }
+        if (CC == 50) // master sync
+        {
+            if (VAL == 0)
+            {
+                doSync = false;
+
+                return;
+            }
+            doSync = true;
+            syncDiv = getDiv(limit(VAL, 1, 8));
         }
 
         if (trk < 8) // if sequncer track messages
@@ -555,8 +569,8 @@ void pulse() // used to compute bpm and send clock message to sequencer for sync
     tick += 1;
     sstep++;
 
-    int ystep = tick == 0 ? 0 : (tick + 1) % ((24 * 4 / 4));
-    if (ystep == 0)
+    int ystep = tick == 0 ? 0 : (tick + 1) % (int)((24 * 4 / syncDiv));
+    if (ystep == 0 && doSync)
         processQ();
 
     const uint mSize = 12; // fill up averaging buffer before computing final bpm;
@@ -746,4 +760,42 @@ void processMessage(syncMessage M)
         updateDiv(M.TRACK, M.VALUE);
         break;
     }
+}
+
+float getDiv(unsigned char d) // return midi time division 1/16,1/4 etc based on midi received valiees 1-6
+{
+    float div = 16.0;
+    switch (d)
+    {
+    case 0:
+    case 1:
+        div = 16.0;
+        break;
+    case 2:
+        div = 8.0;
+        break;
+
+    case 3:
+        div = 4.0;
+        break;
+
+    case 4:
+        div = 2.0;
+        break;
+
+    case 5:
+        div = 1.0;
+        break;
+
+    case 6:
+        div = 1.0 / 2;
+        break;
+    case 7:
+        div = 1.0 / 4;
+        break;
+    case 8:
+        div = 1.0 / 8;
+        break;
+    }
+    return div;
 }

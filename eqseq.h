@@ -9,6 +9,8 @@
 using namespace std;
 class EQSEQ
 {
+    const int OFF_US = 10;
+
 private:
     const int maxSteps = 32;
     vector<int> SEQ;
