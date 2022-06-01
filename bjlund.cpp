@@ -27,7 +27,7 @@ vector<int> BJLUND::bjlund(int m, int k)
     {
         for (vector<vector<int> >::size_type i = 0; i != zeroes.size(); i++)
         {
-            ones[i].push_back(0);
+            ones.at(i).push_back(0);
         }
     }
     else
@@ -39,7 +39,7 @@ vector<int> BJLUND::bjlund(int m, int k)
             int rng = zC >= m ? m : zC;
             for (int i = 0; i < rng; i++)
             {
-                ones[i].push_back(0);
+                ones.at(i).push_back(0);
             };
             zC = zC > m ? zC - m : 0;
         }
@@ -61,7 +61,7 @@ vector<int> BJLUND::bjlund(int m, int k)
             if (i < ones.size())
             {
                 rem++;
-                ones[i].insert(ones[i].end(), pops[i].begin(), pops[i].end());
+                ones.at(i).insert(ones.at(i).end(), pops.at(i).begin(), pops.at(i).end());
             }
         }
 
@@ -69,16 +69,16 @@ vector<int> BJLUND::bjlund(int m, int k)
 
         for (vector<vector<int> >::size_type i = 0; i != pops.size(); i++)
         {
-            ones.push_back(pops[i]);
+            ones.push_back(pops.at(i));
         }
         pops = leasts(ones);
     }
 
     for (vector<vector<int> >::size_type i = 0; i != ones.size(); i++)
     {
-        for (vector<int>::size_type j = 0; j != ones[i].size(); j++)
+        for (vector<int>::size_type j = 0; j != ones.at(i).size(); j++)
         {
-            result.push_back(ones[i][j]);
+            result.push_back(ones.at(i).at(j));
         }
     }
 
@@ -99,7 +99,7 @@ vector<vector<int> > BJLUND::leasts(vector<vector<int> > &vect)
 
     for (vector<int>::size_type i = min; i != vect.size(); i++)
     {
-        ret.push_back(vect[i]);
+        ret.push_back(vect.at(i));
     }
     vect.resize(min);
     return ret;
@@ -111,7 +111,7 @@ int BJLUND::least(vector<vector<int> > &vect)
     int min = 0;
     for (vector<int>::size_type i = 1; i != vect.size() - 1; i++)
     {
-        if (vect[i].size() < max && i > min && vect[i].size() != vect[min].size())
+        if (vect.at(i).size() < max && i > min && vect.at(i).size() != vect.at(min).size())
         {
             min = i;
         }
@@ -122,9 +122,9 @@ void BJLUND::flatten(vector<vector<int> > &vect)
 {
     for (vector<int>::size_type i = 0; i != vect.size(); i++)
     {
-        for (vector<int>::size_type j = 0; j != vect[i].size(); j++)
+        for (vector<int>::size_type j = 0; j != vect.at(i).size(); j++)
         {
-            cout << vect[i][j];
+            cout << vect.at(i).at(j);
         }
         cout << endl;
     }
@@ -137,7 +137,7 @@ void BJLUND::printResults(vector<int> &vect)
     {
         // char c = vect[j] ? 'x' : '.';
         char c = '.';
-        switch (vect[j])
+        switch (vect.at(j))
         {
         case 1:
             c = 'X';
