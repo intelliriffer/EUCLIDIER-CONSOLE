@@ -1,10 +1,13 @@
 #include "bjlund.h"
 #include <vector>
 #include <iostream>
+#include <sstream>
+
 #include <chrono>
 #include <sys/time.h>
 #include <ctime>
 #include "RtMidi.h"
+#include "commontypes.h"
 
 using namespace std;
 class EQSEQ
@@ -66,4 +69,9 @@ public:
     void ENABLE(bool e);
     void updateCH(int ch);
     void updateDiv(int div);
+    lanePatch getPatch();
+
+    std::string FW(std::string s, int value, int width);
+
+    std::string getValues(int trk);
 };

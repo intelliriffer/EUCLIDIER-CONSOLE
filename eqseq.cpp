@@ -104,6 +104,8 @@ void EQSEQ::tick(long long _tick, long long ts) // tick is a midi clock pulse (2
                     {
                         note = note + (12 * mul);
                     }
+                    if (_tick == 0)
+                        cout << "Sending first note" << endl;
                     this->sendNote(0x90, this->ch - 1, note, this->getVel()); // send note on
                     this->lastNote = note;
                 }
@@ -231,6 +233,7 @@ void EQSEQ::sendNote(unsigned char type, unsigned char ch, unsigned char note, u
 void EQSEQ::ENABLE(bool e)
 {
     this->enabled = e;
+
     killHanging();
 }
 void EQSEQ::updateCH(int ch)
@@ -329,4 +332,23 @@ void EQSEQ::setMode(unsigned char _mode)
     this->killHanging();
 
     this->mode = _mode;
+}
+
+lanePatch EQSEQ::getPatch()
+{
+    lanePatch p;
+    p.enabled = this->enabled;
+    p.steps = (unsigned char)this->steps;
+    p.pulses = (unsigned char)this->pulses;
+    p.loop = (unsigned char)this->loop;
+    p.shift = (unsigned char)this->shift;
+    p.div = (unsigned char)this->div;
+
+    p.gate = (unsigned char)this->steps;
+    p.BV = (unsigned char)this->vel;
+    p.VA = (unsigned char)this->velh;
+    p.note = (unsigned char)this->note;
+    p.type = (unsigned char)this->mode;
+    p.ch = (unsigned char)this->ch;
+    return p;
 }

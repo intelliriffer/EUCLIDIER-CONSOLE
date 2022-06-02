@@ -3,13 +3,16 @@
  ***************************************************************** */
 #include "eqseq.h"
 #include <unistd.h>
+#include <sys/stat.h>
 #include <chrono>
 #include <iostream>
 #include <sys/time.h>
 #include <ctime>
+#include <sstream>
 #include "RtMidi.h"
 #include <math.h>
 #include <algorithm>
+#include "commontypes.h"
 using namespace std;
 using std::chrono::duration_cast;
 using std::chrono::high_resolution_clock;
@@ -31,6 +34,8 @@ bool pendingSync = false;
 long long getUS();
 void sendTicks();
 void clear();
+void loadPatch(int slot);
+void savePatch(int slot);
 bool velSense = true;
 bool receiveNotes = true;
 bool autosync = true;
@@ -38,6 +43,7 @@ float BPM = 120.00;
 int getOffset();
 float syncDiv = 4;
 bool doSync = true;
+const string BANK = "BANK.bin";
 
 void clockStop();
 unsigned long long now();
@@ -48,6 +54,7 @@ const bool CONNECT_AKAI_NETWORK = false; // automatically connevt to akai networ
 const unsigned char STEPMAX = 64;        // number of max steps and pulses
 const unsigned VEL_SENSE_MIN = 22;
 const unsigned VEL_SENSE_MAX = 127;
+unsigned char currSlot = 0;
 
 long long tick = 0;
 
@@ -56,13 +63,27 @@ int limit(int v, int min, int max);
 bool paused = false;
 bool started = false;
 void printAll(bool _clear);
+void printLane(int trk);
 void resync(bool force, bool print);
 void updateSteps(unsigned char trk, unsigned char VALUE);
 void updatePulse(unsigned char trk, unsigned char VALUE);
 void updateShift(unsigned char trk, unsigned char VALUE);
 void updateLoop(unsigned char trk, unsigned char VALUE);
 void updateDiv(unsigned char trk, unsigned char VALUE);
+void createBANK(string filename);
+string basePath = "";
+EUPATCH seqPatch();
+std::string
+FW(std::string label, int value, int max_digits);
 float getDiv(unsigned char d);
+struct loadedPatch
+{
+    int slot = -1;
+    EUPATCH patch;
+};
+loadedPatch loaded;
+long long loading = 0;
+bool saving = false;
 RtMidiIn *midiIn = 0;
 RtMidiIn *HWIN = 0;
 RtMidiOut *midiOut = 0;
@@ -94,6 +115,11 @@ EQSEQ *SQ = new EQSEQ[8]; // creante the 8 track sequencer in an array
 int main()
 {
     clear();
+    char c[260];
+    int l = (int)readlink("/proc/self/exe", c, 260);
+    // cout << string(c, l > 0 ? l : 0) << endl;
+    string tss = string(c, l > 0 ? l : 0);
+    basePath = tss.length() > 0 ? tss.append(BANK) : "euclidier" + BANK;
     BOOT_TIME = now();
     midiIn = new RtMidiIn();
     midiIn->setCallback(&onMIDI);
@@ -132,11 +158,9 @@ int main()
     }
 
     cout << "Ports opened - Waiting for Midi Clock Input to Start " << endl;
-    printAll(false);
 
     for (int i = 0; i < SEQS; i++) // initialize sequencer parameters
     {
-
         SQ[i].setPORT(midiOut);
         if (i == 4)
         {
@@ -167,12 +191,24 @@ int main()
         SQ[i].updateSeq();
     }
     SQ[0].ENABLE(true);
+    createBANK(basePath);
+    // SQ[0].pulses = 13;
+    //  loadPatch(0);
+    // savePatch(7);
+    //  loadPatch(1);
+    sleep(1);
+    loadPatch(0);
 
+    printAll(false);
     long long last = 0;
 
     while (true) // the main loop
     {
         long long us = getUS();
+        if (loading != 0 && us > loading) // patch recall expired
+        {
+            loading = 0;
+        }
         if (started)
         {
             if (!doSync)
@@ -201,9 +237,23 @@ void printAll(bool _clear = true) // prints the sequence to console.
 
         SQ[i].print();
     }
-    cout << endl
-         << "  *********************************" << endl
-         << endl;
+    /*   cout << endl
+            << "  *********************************" << endl
+            << endl;*/
+    cout << "  *********************************" << endl;
+    if (loaded.slot != -1)
+    {
+        cout << "        <<< Loaded Slot: " << loaded.slot << "  VALUES  >>>  " << endl;
+        cout << "  *********************************" << endl;
+
+        for (int i = 0; i < SEQS; i++)
+        {
+            printLane(i);
+        }
+        cout << endl
+             << "  *********************************" << endl
+             << endl;
+    }
 }
 void clear()
 {
@@ -216,7 +266,8 @@ void clear()
 
 void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*userData*/) // handles incomind midi
 {
-
+    if (loading != 0)
+        return;
     unsigned char byte0 = (int)message->at(0);
     unsigned char typ = byte0 & 0xF0;
     uint size = message->size();
@@ -269,7 +320,13 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
             SQ[xpose].octave = -1;
         }
     }
-
+    if (typ == 0xC0) // program change message
+    {
+        unsigned char PC = (int)message->at(1);
+        // unsigned char VAL = (int)message->at(2);
+        loadPatch(limit(PC, 0, 127));
+        return;
+    }
     if (typ == 0xB0) // cc message
     {
 
@@ -290,6 +347,21 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
         unsigned char ch = byte0 & 0x0F;
         unsigned char trk = CC / 10;
         unsigned char cmd = CC % 10;
+        if (CC == 20)
+        {
+            currSlot = limit(VAL, 0, 127);
+            return;
+        }
+        if (CC == 29 && VAL == 127)
+        {
+            loadPatch(currSlot);
+            return;
+        }
+        if (CC == 30 && VAL == 127)
+        {
+            savePatch(currSlot);
+            return;
+        }
         if (CC == 100 && VAL > 0 && VAL % 2 == 0)
         {
             for (unsigned char i = 0; i < SEQS; i++)
@@ -426,7 +498,7 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
                 break;
             case 8:
 
-                SQ[trk].updateCH(limit(VAL, 1, 16));
+                SQ[trk].updateCH(limit(VAL, 1, 15));
                 break;
 
             case 9: // edge cases for force
@@ -482,6 +554,7 @@ void sendNote(unsigned char type, unsigned char ch, unsigned char note, unsigned
     messageOut.push_back(ch + type);
     messageOut.push_back(note);
     messageOut.push_back(vel);
+    // cout << "Sending " << (int)note << " with value " << (int)vel << endl;
     midiOut->sendMessage(&messageOut);
 }
 
@@ -575,8 +648,8 @@ void pulse() // used to compute bpm and send clock message to sequencer for sync
 
     const uint mSize = 12; // fill up averaging buffer before computing final bpm;
     pulses.push_back(ms());
-    if (pulses.size() < mSize)
-        return;
+    /* if (pulses.size() < mSize)
+         return;*/
     if (pulses.size() > mSize)
     {
         pulses.erase(pulses.begin());
@@ -798,4 +871,167 @@ float getDiv(unsigned char d) // return midi time division 1/16,1/4 etc based on
         break;
     }
     return div;
+}
+
+void printLane(int trk)
+{
+    //   lanePatch p = SQ[trk].getPatch();
+    lanePatch p = loaded.patch.lane[trk];
+
+    std::stringstream S;
+    S << trk + 1 << "."
+      << FW(" E:", (int)p.enabled, 1)
+
+      << FW(" S:", (int)p.steps, 2)
+
+      << FW(" F:", (int)p.pulses, 2) << FW(" >:", (int)p.shift, 2)
+      << FW(" L:", (int)p.loop, 2) << FW(" D:", (int)p.div, 2)
+
+      << FW(" N:", (int)p.note, 3) << FW(" G:", (int)p.gate, 2)
+      << FW(" BV:", (int)p.BV, 3) << FW(" VA:", (int)p.VA, 3)
+      << FW(" T:", (int)p.type, 1) << FW(" Ch:", (int)p.ch, 2);
+    cout << S.str() << endl;
+}
+std::string FW(std::string label, int value, int max_digits)
+{
+
+    string s = label.append(to_string(value));
+
+    int spaces = max_digits - to_string(value).length();
+    if (spaces > 0)
+    {
+        string ss = string(spaces, ' ');
+
+        s.append(ss);
+    }
+    return s;
+}
+void createBANK(string filename)
+{
+    cout << "BANK: " << sizeof(EUBANK)
+         << " PATCH:" << sizeof(EUPATCH)
+         << " Lane:" << sizeof(lanePatch);
+    struct stat buffer;
+    cout << " Creating " << filename << endl;
+    if (stat(filename.c_str(), &buffer) == 0) // should be 0
+    {
+        cout << "exists" << endl;
+    }
+    else
+    {
+        //   cout << " notexists" << endl;
+
+        EUPATCH E = seqPatch();
+
+        FILE *o;
+        o = fopen(filename.c_str(), "wb");
+        if (o != NULL)
+        {
+            for (int i = 0; i != 128; i++)
+            {
+                fwrite(&E, sizeof(struct EUPATCH), 1, o);
+            }
+            fclose(o);
+            //  cout << " Written" << endl;
+        }
+    }
+}
+EUPATCH seqPatch()
+{
+    EUPATCH pch;
+    for (int i = 0; i != 8; i++)
+    {
+        lanePatch l = SQ[i].getPatch();
+        pch.lane[i] = l;
+    }
+
+    return pch;
+}
+
+void loadPatch(int slot)
+{
+
+    FILE *F;
+    slot = limit(slot, 0, 127);
+
+    F = fopen(basePath.c_str(), "rb");
+    if (F != NULL)
+    {
+        EUPATCH E;
+        fseek(F, sizeof(struct EUPATCH) * slot, SEEK_SET);
+        fread(&E, sizeof(struct EUPATCH), 1, F);
+        fclose(F);
+        loaded.patch = E;
+        loaded.slot = slot;
+        loading = getUS() + (1000 * 50); // 30ms
+        // cout << "loading is" << loading << endl;
+        for (int i = 0; i != 8; i++)
+        {
+            SQ[i].ENABLE(E.lane[i].enabled);
+            sendNote(0xB0, 15, (i * 10) + 1, E.lane[i].enabled ? 127 : 0);
+            SQ[i].steps = E.lane[i].steps;
+            if (i != 6)
+                sendNote(0xB0, 15, (i * 10) + 4, E.lane[i].steps);
+            else
+                sendNote(0xB0, 15, (i * 10) + 9, E.lane[i].steps);
+
+            SQ[i].pulses = E.lane[i].pulses;
+            sendNote(0xB0, 15, (i * 10) + 5, E.lane[i].pulses);
+
+            SQ[i].shift = E.lane[i].shift;
+            sendNote(0xB0, 15, (i * 10) + 6, E.lane[i].shift);
+
+            SQ[i].loop = E.lane[i].loop;
+            sendNote(0xB0, 15, i + 101, E.lane[i].loop);
+
+            SQ[i].updateDiv(E.lane[i].div);
+            if (i != 0)
+                sendNote(0xB0, 15, (i * 10) + 3, E.lane[i].div);
+
+            SQ[i].ch = E.lane[i].ch;
+            sendNote(0xB0, 15, (i * 10) + 8, E.lane[i].ch);
+
+            SQ[i].gate = E.lane[i].gate;
+            if (i != 0)
+                sendNote(0xB0, 15, (i * 10) + 7, E.lane[i].gate);
+            else
+                sendNote(0xB0, 15, (i * 10) + 9, E.lane[i].gate);
+            SQ[i].vel = E.lane[i].BV;
+            sendNote(0xB0, 15, i + 81, E.lane[i].BV);
+            SQ[i].velh = E.lane[i].VA;
+            sendNote(0xB0, 15, i + 91, E.lane[i].VA);
+            SQ[i].note = E.lane[i].note;
+            sendNote(0xB0, 15, (i * 10) + 2, E.lane[i].note);
+
+            SQ[i].setMode(E.lane[i].type);
+            sendNote(0xB0, 15, i + 111, E.lane[i].type);
+
+            SQ[i].updateSeq();
+        }
+
+        resync(true, true);
+
+        //  cout << "REad " << (int)E.lane[0].pulses << endl;
+    }
+}
+void savePatch(int slot)
+{
+    if (saving)
+        return;
+    saving = true;
+    EUPATCH E = seqPatch();
+
+    FILE *o;
+    o = fopen(basePath.c_str(), "rb+");
+    if (o != NULL)
+    {
+        fseek(o, sizeof(struct EUPATCH) * slot, SEEK_SET);
+        fwrite(&E, sizeof(struct EUPATCH), 1, o);
+        fclose(o);
+    }
+    loaded.patch = E;
+    loaded.slot = slot;
+    cout << "Patch Saved to Slot:" << (int)currSlot << endl;
+    printAll();
+    saving = false;
 }
