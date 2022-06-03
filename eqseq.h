@@ -28,7 +28,7 @@ private:
     RtMidiOut *midi = 0;
     void sendNote(unsigned char type, unsigned char ch, unsigned char note, unsigned char vel);
     void killHanging();
-    int getDiv();
+   
     int getVel();
     int limit(int v, int min, int max);
     long long sstep = 0;
@@ -69,6 +69,7 @@ public:
     void ENABLE(bool e);
     void updateCH(int ch);
     void updateDiv(int div);
+    int getDiv();
     lanePatch getPatch();
 
     std::string FW(std::string s, int value, int width);

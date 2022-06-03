@@ -41,11 +41,12 @@ bool receiveNotes = true;
 bool autosync = true;
 float BPM = 120.00;
 int getOffset();
-float syncDiv = 4;
+float syncDiv = 3;
 bool doSync = true;
 const string BANK = "BANK.bin";
 
 void clockStop();
+string typeLabel(int trk);
 unsigned long long now();
 unsigned long long ms();
 unsigned long long BOOT_TIME;
@@ -73,6 +74,7 @@ void updateDiv(unsigned char trk, unsigned char VALUE);
 void updateNote(unsigned char trk, unsigned char VALUE);
 void updateEnable(unsigned char trk, unsigned char VALUE);
 void createBANK(string filename);
+
 string basePath = "";
 EUPATCH seqPatch();
 std::string
@@ -103,6 +105,7 @@ enum syncTypes
     GATE,
     ENABLE
 };
+bool needsSync(syncTypes T);
 struct syncMessage
 {
     unsigned char CC;
@@ -236,18 +239,25 @@ void printAll(bool _clear = true) // prints the sequence to console.
     if (_clear)
         clear();
     cout << string(68, '*') << endl;
+
     cout << "        <<<  SEQUENCES  >>>  " << endl;
-    cout << string(68, '*') << endl;
+    cout << string(78, '*') << endl;
 
     for (int i = 0; i < SEQS; i++)
     {
+        cout << (SQ[i].enabled ? "* " : "  ")
+             << typeLabel(i)
+             << (SQ[i].enabled ? "* " : "  ")
+             << FW("1/", SQ[i].getDiv(), 2)
+             << "  | ";
 
         SQ[i].print();
     }
     /*   cout << endl
             << "  *********************************" << endl
             << endl;*/
-    cout << string(68, '*') << endl;
+    cout << endl
+         << string(78, '*') << endl;
     if (loaded.slot != -1)
     {
         cout << "        <<< Loaded Slot: " << loaded.slot << "  VALUES  >>>  " << endl;
@@ -271,8 +281,7 @@ void clear()
 
 void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*userData*/) // handles incomind midi
 {
-    if (loading != 0)
-        return;
+
     unsigned char byte0 = (int)message->at(0);
     unsigned char typ = byte0 & 0xF0;
     uint size = message->size();
@@ -283,6 +292,8 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
         handleClockMessage(message->at(0));
         return;
     }
+    if (loading != 0)
+        return;
     if (typ == 0x90 && receiveNotes) // note message
     {
 
@@ -437,10 +448,14 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
             case 1: // enabled
                 if (!started)
                 {
-                    SQ[trk].ENABLE(VAL > 64);
+                    SQ[trk].ENABLE(VAL > 63);
+                    printAll();
                     return;
                 }
-                queCC(CC, trk, VAL, ENABLE);
+                if (SQ[trk].enabled != (VAL > 63))
+                {
+                    queCC(CC, trk, VAL, ENABLE);
+                }
                 break;
 
             case 2: // note
@@ -448,7 +463,7 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
                 {
                     updateNote(trk, VAL);
                     // SQ[trk].updateSeq();
-                    // printAll();
+                    printAll();
                     return;
                 }
                 queCC(CC, trk, VAL, NOTE);
@@ -510,17 +525,18 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
                 if (trk == 0) // ignore cc 64
                     break;
 
-                SQ[trk].setGATE(limit(VAL, 0, 95));
+                SQ[trk].setGATE(limit(VAL, 10, 95));
                 break;
             case 8:
 
                 SQ[trk].updateCH(limit(VAL, 1, 15));
+                printAll();
                 break;
 
             case 9: // edge cases for force
                 if (trk == 0)
                 {
-                    SQ[trk].setGATE(limit(VAL, 0, 95));
+                    SQ[trk].setGATE(limit(VAL, 10, 95));
 
                     break;
                 }
@@ -557,8 +573,8 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
             }
             if (trk == 11 && cmd > 0 && cmd <= 8) // set Modes 1-3
             {
-
                 SQ[cmd - 1].setMode(VAL); // 0=off
+                printAll();
             }
         }
     }
@@ -782,7 +798,7 @@ void updateSteps(unsigned char trk, unsigned char VALUE)
 }
 void updateEnable(unsigned char trk, unsigned char VALUE)
 {
-    cout << " enablke value for " << trk << " " << VALUE << endl;
+
     SQ[trk].ENABLE(VALUE > 63);
 }
 void updateNote(unsigned char trk, unsigned char VALUE)
@@ -809,14 +825,16 @@ void processQ()
     for (vector<syncMessage>::size_type i = 0; i != QUEUE.size(); i++)
     {
         processMessage(QUEUE.at(i));
-        updated.push_back(QUEUE.at(i).TRACK);
+        if (needsSync(QUEUE.at(i).TYPE)) // to not resync on enable disable
+            updated.push_back(QUEUE.at(i).TRACK);
     }
     QUEUE.clear();
     QPROCESSING = false;
     for (vector<syncMessage>::size_type i = 0; i != WAIT_QUEUE.size(); i++)
     {
         processMessage(WAIT_QUEUE.at(i));
-        updated.push_back(WAIT_QUEUE.at(i).TRACK);
+        if (needsSync(WAIT_QUEUE.at(i).TYPE))
+            updated.push_back(WAIT_QUEUE.at(i).TRACK);
     }
     WAIT_QUEUE.clear();
     if (updated.size())
@@ -939,14 +957,14 @@ std::string FW(std::string label, int value, int max_digits)
 }
 void createBANK(string filename)
 {
-    cout << "BANK: " << sizeof(EUBANK)
-         << " PATCH:" << sizeof(EUPATCH)
-         << " Lane:" << sizeof(lanePatch);
+    /*  cout << "BANK: " << sizeof(EUBANK)
+           << " PATCH:" << sizeof(EUPATCH)
+           << " Lane:" << sizeof(lanePatch);*/
     struct stat buffer;
-    cout << " Creating " << filename << endl;
+    /*cout << " Creating " << filename << endl;*/
     if (stat(filename.c_str(), &buffer) == 0) // should be 0
     {
-        cout << "exists" << endl;
+        //    cout << "exists" << endl;
     }
     else
     {
@@ -994,7 +1012,7 @@ void loadPatch(int slot)
         fclose(F);
         loaded.patch = E;
         loaded.slot = slot;
-        loading = getUS() + (1000 * 50); // 30ms
+        loading = getUS() + (1000 * 100); // 100ms
         // cout << "loading is" << loading << endl;
         for (int i = 0; i != 8; i++)
         {
@@ -1036,10 +1054,8 @@ void loadPatch(int slot)
                 sendNote(0xB0, 15, (i * 10) + 6, E.lane[i].shift);
 
                 SQ[i].updateDiv(E.lane[i].div);
-                if (i != 0)
-                    sendNote(0xB0, 15, (i * 10) + 3, E.lane[i].div);
-                else
-                    sendNote(0xB0, 15, (i * 10) + 9, E.lane[i].div);
+
+                sendNote(0xB0, 15, (i * 10) + 3, E.lane[i].div);
 
                 SQ[i].note = E.lane[i].note;
                 sendNote(0xB0, 15, (i * 10) + 2, E.lane[i].note);
@@ -1061,11 +1077,9 @@ void loadPatch(int slot)
                 queCC((i * 10) + 6, i, E.lane[i].shift, SHIFT);
                 //  sendNote(0xB0, 15, (i * 10) + 2, E.lane[i].note);
                 queCC((i * 10) + 2, i, E.lane[i].note, NOTE);
-                if (i != 0)
-                    // sendNote(0xB0, 15, (i * 10) + 3, E.lane[i].div);
-                    queCC((i * 10) + 3, i, E.lane[i].div, DIV);
-                else
-                    queCC((i * 10) + 9, i, E.lane[i].div, DIV);
+                // sendNote(0xB0, 15, (i * 10) + 3, E.lane[i].div);
+                queCC((i * 10) + 3, i, E.lane[i].div, DIV);
+
                 //   SQ[i].ENABLE(E.lane[i].enabled);
                 //  sendNote(0xB0, 15, (i * 10) + 1, E.lane[i].enabled ? 127 : 0);
                 //  queCC((i * 10) + 1, i, E.lane[i].enabled, ENABLE);
@@ -1097,4 +1111,34 @@ void savePatch(int slot)
     cout << "Patch Saved to Slot:" << (int)currSlot << endl;
     printAll();
     saving = false;
+}
+string typeLabel(int trk)
+{
+    switch (limit(SQ[trk].mode, 1, 4))
+    {
+    case 0:
+    case 1:
+        return "NT ";
+    case 2:
+        return "DR ";
+    case 3:
+        return "C1 ";
+    case 4:
+        return "C2 ";
+    }
+    return "   ";
+}
+
+bool needsSync(syncTypes T)
+{
+    switch (T)
+    {
+    case ENABLE:
+        return false;
+        break;
+    case NOTE:
+        return false;
+        break;
+    }
+    return true;
 }

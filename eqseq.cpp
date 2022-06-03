@@ -96,7 +96,7 @@ void EQSEQ::tick(long long _tick, long long ts) // tick is a midi clock pulse (2
 
             if (this->enabled)
             {
-                if (this->mode == 1) // note mode
+                if (this->mode < 3) // note mode
                 {
                     int note = this->note + (12 * this->octave) + this->xpose;
                     int mul = note > 127 ? -1 : 1;
@@ -104,12 +104,14 @@ void EQSEQ::tick(long long _tick, long long ts) // tick is a midi clock pulse (2
                     {
                         note = note + (12 * mul);
                     }
+                    if (this->mode == 2)
+                        note = this->note;
 
                     this->sendNote(0x90, this->ch - 1, note, this->getVel()); // send note on
                     this->lastNote = note;
                 }
 
-                if (this->mode > 1) // cc
+                if (this->mode > 2) // cc
                 {
                     int CC = limit(this->note, 1, 119);
                     this->lastRandVal = this->getVel();
@@ -231,9 +233,12 @@ void EQSEQ::sendNote(unsigned char type, unsigned char ch, unsigned char note, u
 
 void EQSEQ::ENABLE(bool e)
 {
-    this->enabled = e;
+    if (!this->enabled == e)
+    {
+        this->enabled = e;
 
-    killHanging();
+        killHanging();
+    }
 }
 void EQSEQ::updateCH(int ch)
 {
@@ -271,7 +276,7 @@ void EQSEQ::killHanging() // stops any playing note used before any operation th
 }
 int EQSEQ::getVel() // computes step velocity based on base velocity and humanization factor.
 {
-    if (this->mode <= 1) // note mode
+    if (this->mode <= 2) // note mode
     {                    // note mode
         if (this->velh == 0)
             return this->vel;
@@ -281,14 +286,14 @@ int EQSEQ::getVel() // computes step velocity based on base velocity and humaniz
         int add = this->velh > 0 ? rand() % this->velh : 0;
         return limit(this->vel + add, 0, 127);
     }
-    if (this->mode == 2)
+    if (this->mode == 3)
     {
         if (this->velh == 0)
             return this->vel;
         return limit(this->velh, 1, 127);
     }
 
-    { // mode 2  random cc
+    { // mode 4  random cc
         if (this->velh == 0)
             return this->vel;
         srand(time(NULL));
@@ -325,7 +330,7 @@ void EQSEQ::setGATE(int value) // set note duration (10-95%)
 }
 void EQSEQ::setMode(unsigned char _mode)
 {
-    _mode = limit(_mode, 1, 3);
+    _mode = limit(_mode, 1, 4);
     if (_mode == this->mode)
         return;
     this->killHanging();
@@ -343,7 +348,7 @@ lanePatch EQSEQ::getPatch()
     p.shift = (unsigned char)this->shift;
     p.div = (unsigned char)this->div;
 
-    p.gate = (unsigned char)this->steps;
+    p.gate = (unsigned char)this->gate;
     p.BV = (unsigned char)this->vel;
     p.VA = (unsigned char)this->velh;
     p.note = (unsigned char)this->note;

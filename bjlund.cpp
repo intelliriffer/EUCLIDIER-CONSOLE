@@ -132,7 +132,7 @@ void BJLUND::flatten(vector<vector<int> > &vect)
 
 void BJLUND::printResults(vector<int> &vect)
 {
-    cout << "  ";
+    // cout << "";
     for (vector<int>::size_type j = 0; j != vect.size(); j++)
     {
         // char c = vect[j] ? 'x' : '.';
