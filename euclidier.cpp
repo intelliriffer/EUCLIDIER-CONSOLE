@@ -173,14 +173,18 @@ int main()
     for (int i = 0; i < SEQS; i++) // initialize sequencer parameters
     {
         SQ[i].setPORT(midiOut);
+
+        if (i > 3)
+        {
+            SQ[i].ch = 10;
+            SQ[i].mode = 2; // set 4-8 to drum type non transposeable.
+        }
+
         if (i == 4)
         {
             SQ[i].note = 36;
         }
-        if (i > 3)
-        {
-            SQ[i].ch = 10;
-        }
+
         if (i == 5)
         {
             SQ[i].note = 41;
