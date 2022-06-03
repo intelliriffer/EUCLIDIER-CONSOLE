@@ -104,8 +104,7 @@ void EQSEQ::tick(long long _tick, long long ts) // tick is a midi clock pulse (2
                     {
                         note = note + (12 * mul);
                     }
-                    if (_tick == 0)
-                        cout << "Sending first note" << endl;
+
                     this->sendNote(0x90, this->ch - 1, note, this->getVel()); // send note on
                     this->lastNote = note;
                 }

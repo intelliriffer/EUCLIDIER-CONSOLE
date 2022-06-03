@@ -70,6 +70,8 @@ void updatePulse(unsigned char trk, unsigned char VALUE);
 void updateShift(unsigned char trk, unsigned char VALUE);
 void updateLoop(unsigned char trk, unsigned char VALUE);
 void updateDiv(unsigned char trk, unsigned char VALUE);
+void updateNote(unsigned char trk, unsigned char VALUE);
+void updateEnable(unsigned char trk, unsigned char VALUE);
 void createBANK(string filename);
 string basePath = "";
 EUPATCH seqPatch();
@@ -93,7 +95,13 @@ enum syncTypes
     PULSE,
     SHIFT,
     LOOP,
-    DIV
+    DIV,
+    NOTE,
+    BV,
+    VA,
+    CH,
+    GATE,
+    ENABLE
 };
 struct syncMessage
 {
@@ -197,8 +205,7 @@ int main()
     // savePatch(7);
     //  loadPatch(1);
     sleep(1);
-    loadPatch(0);
-
+    //    loadPatch(0);
     printAll(false);
     long long last = 0;
 
@@ -228,9 +235,9 @@ void printAll(bool _clear = true) // prints the sequence to console.
 {
     if (_clear)
         clear();
-    cout << "  *********************************" << endl;
+    cout << string(68, '*') << endl;
     cout << "        <<<  SEQUENCES  >>>  " << endl;
-    cout << "  *********************************" << endl;
+    cout << string(68, '*') << endl;
 
     for (int i = 0; i < SEQS; i++)
     {
@@ -240,19 +247,17 @@ void printAll(bool _clear = true) // prints the sequence to console.
     /*   cout << endl
             << "  *********************************" << endl
             << endl;*/
-    cout << "  *********************************" << endl;
+    cout << string(68, '*') << endl;
     if (loaded.slot != -1)
     {
         cout << "        <<< Loaded Slot: " << loaded.slot << "  VALUES  >>>  " << endl;
-        cout << "  *********************************" << endl;
-
+        cout << string(68, '*') << endl;
         for (int i = 0; i < SEQS; i++)
         {
             printLane(i);
         }
         cout << endl
-             << "  *********************************" << endl
-             << endl;
+             << string(68, '*') << endl;
     }
 }
 void clear()
@@ -430,12 +435,23 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
             switch (cmd)
             {
             case 1: // enabled
-                SQ[trk].ENABLE(VAL > 64);
+                if (!started)
+                {
+                    SQ[trk].ENABLE(VAL > 64);
+                    return;
+                }
+                queCC(CC, trk, VAL, ENABLE);
                 break;
 
             case 2: // note
-                SQ[trk].note = VAL;
-                //       0 - 127
+                if (!started)
+                {
+                    updateNote(trk, VAL);
+                    // SQ[trk].updateSeq();
+                    // printAll();
+                    return;
+                }
+                queCC(CC, trk, VAL, NOTE);
                 break;
 
             case 3:
@@ -764,6 +780,15 @@ void updateSteps(unsigned char trk, unsigned char VALUE)
 {
     SQ[trk].steps = limit(VALUE, 2, STEPMAX);
 }
+void updateEnable(unsigned char trk, unsigned char VALUE)
+{
+    cout << " enablke value for " << trk << " " << VALUE << endl;
+    SQ[trk].ENABLE(VALUE > 63);
+}
+void updateNote(unsigned char trk, unsigned char VALUE)
+{
+    SQ[trk].note = limit(VALUE, 0, 127);
+}
 void updatePulse(unsigned char trk, unsigned char VALUE)
 {
     SQ[trk].pulses = limit(VALUE, 1, STEPMAX);
@@ -831,6 +856,12 @@ void processMessage(syncMessage M)
 
     case DIV:
         updateDiv(M.TRACK, M.VALUE);
+        break;
+    case NOTE:
+        updateNote(M.TRACK, M.VALUE);
+        break;
+    case ENABLE:
+        updateEnable(M.TRACK, M.VALUE);
         break;
     }
 }
@@ -967,26 +998,14 @@ void loadPatch(int slot)
         // cout << "loading is" << loading << endl;
         for (int i = 0; i != 8; i++)
         {
-            SQ[i].ENABLE(E.lane[i].enabled);
-            sendNote(0xB0, 15, (i * 10) + 1, E.lane[i].enabled ? 127 : 0);
-            SQ[i].steps = E.lane[i].steps;
-            if (i != 6)
-                sendNote(0xB0, 15, (i * 10) + 4, E.lane[i].steps);
-            else
-                sendNote(0xB0, 15, (i * 10) + 9, E.lane[i].steps);
 
-            SQ[i].pulses = E.lane[i].pulses;
-            sendNote(0xB0, 15, (i * 10) + 5, E.lane[i].pulses);
+            SQ[i].setMode(E.lane[i].type);
+            sendNote(0xB0, 15, i + 111, E.lane[i].type);
 
-            SQ[i].shift = E.lane[i].shift;
-            sendNote(0xB0, 15, (i * 10) + 6, E.lane[i].shift);
-
-            SQ[i].loop = E.lane[i].loop;
-            sendNote(0xB0, 15, i + 101, E.lane[i].loop);
-
-            SQ[i].updateDiv(E.lane[i].div);
-            if (i != 0)
-                sendNote(0xB0, 15, (i * 10) + 3, E.lane[i].div);
+            SQ[i].vel = E.lane[i].BV;
+            sendNote(0xB0, 15, i + 81, E.lane[i].BV);
+            SQ[i].velh = E.lane[i].VA;
+            sendNote(0xB0, 15, i + 91, E.lane[i].VA);
 
             SQ[i].ch = E.lane[i].ch;
             sendNote(0xB0, 15, (i * 10) + 8, E.lane[i].ch);
@@ -996,20 +1015,64 @@ void loadPatch(int slot)
                 sendNote(0xB0, 15, (i * 10) + 7, E.lane[i].gate);
             else
                 sendNote(0xB0, 15, (i * 10) + 9, E.lane[i].gate);
-            SQ[i].vel = E.lane[i].BV;
-            sendNote(0xB0, 15, i + 81, E.lane[i].BV);
-            SQ[i].velh = E.lane[i].VA;
-            sendNote(0xB0, 15, i + 91, E.lane[i].VA);
-            SQ[i].note = E.lane[i].note;
-            sendNote(0xB0, 15, (i * 10) + 2, E.lane[i].note);
+            SQ[i].loop = E.lane[i].loop;
+            sendNote(0xB0, 15, i + 101, E.lane[i].loop);
+            SQ[i].ENABLE(E.lane[i].enabled);
+            sendNote(0xB0, 15, (i * 10) + 1, E.lane[i].enabled ? 127 : 0);
 
-            SQ[i].setMode(E.lane[i].type);
-            sendNote(0xB0, 15, i + 111, E.lane[i].type);
+            if (!started)
+            {
 
-            SQ[i].updateSeq();
+                SQ[i].steps = E.lane[i].steps;
+                if (i != 6)
+                    sendNote(0xB0, 15, (i * 10) + 4, E.lane[i].steps);
+                else
+                    sendNote(0xB0, 15, (i * 10) + 9, E.lane[i].steps);
+
+                SQ[i].pulses = E.lane[i].pulses;
+                sendNote(0xB0, 15, (i * 10) + 5, E.lane[i].pulses);
+
+                SQ[i].shift = E.lane[i].shift;
+                sendNote(0xB0, 15, (i * 10) + 6, E.lane[i].shift);
+
+                SQ[i].updateDiv(E.lane[i].div);
+                if (i != 0)
+                    sendNote(0xB0, 15, (i * 10) + 3, E.lane[i].div);
+                else
+                    sendNote(0xB0, 15, (i * 10) + 9, E.lane[i].div);
+
+                SQ[i].note = E.lane[i].note;
+                sendNote(0xB0, 15, (i * 10) + 2, E.lane[i].note);
+
+                SQ[i].updateSeq();
+            }
+            else
+            {
+                if (i != 6)
+                    // sendNote(0xB0, 15, (i * 10) + 4, E.lane[i].steps);
+                    queCC((i * 10) + 4, i, E.lane[i].steps, STEP);
+                else
+                    queCC((i * 10) + 9, i, E.lane[i].steps, STEP);
+
+                //  sendNote(0xB0, 15, (i * 10) + 5, E.lane[i].pulses);
+                queCC((i * 10) + 5, i, E.lane[i].pulses, PULSE);
+
+                // sendNote(0xB0, 15, (i * 10) + 6, E.lane[i].shift);
+                queCC((i * 10) + 6, i, E.lane[i].shift, SHIFT);
+                //  sendNote(0xB0, 15, (i * 10) + 2, E.lane[i].note);
+                queCC((i * 10) + 2, i, E.lane[i].note, NOTE);
+                if (i != 0)
+                    // sendNote(0xB0, 15, (i * 10) + 3, E.lane[i].div);
+                    queCC((i * 10) + 3, i, E.lane[i].div, DIV);
+                else
+                    queCC((i * 10) + 9, i, E.lane[i].div, DIV);
+                //   SQ[i].ENABLE(E.lane[i].enabled);
+                //  sendNote(0xB0, 15, (i * 10) + 1, E.lane[i].enabled ? 127 : 0);
+                //  queCC((i * 10) + 1, i, E.lane[i].enabled, ENABLE);
+            }
         }
-
-        resync(true, true);
+        printAll(true);
+        //  resync(true, true);
 
         //  cout << "REad " << (int)E.lane[0].pulses << endl;
     }
