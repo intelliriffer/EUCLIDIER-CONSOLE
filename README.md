@@ -119,9 +119,10 @@ or if using Mockba/Kick Gen Mod, you can put in a launch script in their respect
     11. CC: 101,102,103,104,105,106,107,108 : Set LOOP Steps (Restart Point) 0=off, the Sequence Restarts at its Number of steps. 1-64 : The sequnce will play cyclickly until Loop Point number of steps have been played and then will restart. Values < steps , will shorten the playing sequence pattern.
 
     12. CC: 111,112,113,114,115,116,117,118 : Set Track Modes Between
-        1.   1: Note,
-        2.   2: CC1
-        3.   3: CC2
+        1.   1: Note
+        2.   2: Drum
+        3.   2: CC1
+        4.   3: CC2
     
     13. Global Modifiers
         1.  CC 99:  (0-1): Receive Notes
