@@ -125,6 +125,7 @@ const unsigned char SEQS = 8;
 EQSEQ *SQ = new EQSEQ[8]; // creante the 8 track sequencer in an array
 int main()
 {
+    srand(time(NULL));
     clear();
     char c[260];
     int l = (int)readlink("/proc/self/exe", c, 260);
@@ -242,16 +243,15 @@ void printAll(bool _clear = true) // prints the sequence to console.
 {
     if (_clear)
         clear();
-    cout << string(68, '*') << endl;
+    cout << string(80, '*') << endl;
 
     cout << "        <<<  SEQUENCES  >>>  " << endl;
-    cout << string(78, '*') << endl;
+    cout << string(80, '*') << endl;
 
     for (int i = 0; i < SEQS; i++)
     {
         cout << (SQ[i].enabled ? "* " : "  ")
              << typeLabel(i)
-             << (SQ[i].enabled ? "* " : "  ")
              << FW("1/", SQ[i].getDiv(), 2)
              << "  | ";
 
@@ -261,17 +261,17 @@ void printAll(bool _clear = true) // prints the sequence to console.
             << "  *********************************" << endl
             << endl;*/
     cout << endl
-         << string(78, '*') << endl;
+         << string(80, '*') << endl;
     if (loaded.slot != -1)
     {
         cout << "        <<< Loaded Slot: " << loaded.slot << "  VALUES  >>>  " << endl;
-        cout << string(68, '*') << endl;
+        cout << string(80, '*') << endl;
         for (int i = 0; i < SEQS; i++)
         {
             printLane(i);
         }
         cout << endl
-             << string(68, '*') << endl;
+             << string(80, '*') << endl;
     }
 }
 void clear()

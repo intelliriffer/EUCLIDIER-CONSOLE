@@ -281,7 +281,6 @@ int EQSEQ::getVel() // computes step velocity based on base velocity and humaniz
         if (this->velh == 0)
             return this->vel;
 
-        srand(time(NULL));
         //        int mul = ((rand() % 10)) % 2 == 0 ? 1 : -1;
         int add = this->velh > 0 ? rand() % this->velh : 0;
         return limit(this->vel + add, 0, 127);
@@ -296,7 +295,7 @@ int EQSEQ::getVel() // computes step velocity based on base velocity and humaniz
     { // mode 4  random cc
         if (this->velh == 0)
             return this->vel;
-        srand(time(NULL));
+
         int max = std::max(this->vel, this->velh);
         int min = std::min(this->vel, this->velh);
         int diff = (max - min);
