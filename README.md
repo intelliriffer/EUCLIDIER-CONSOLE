@@ -1,7 +1,9 @@
-# Euclidier - 8 Channel Midi Euclidean Note Sequencer for Force/MPC Beta 0.1.6
+# Euclidier - 8 Channel Midi Euclidean Note Sequencer for Akai Force/ Akai MPC / Raspberry pi / Mac OSX (intel) Beta 0.1.7
 
-## Download Latest Binaries 0.1.6
-1. [Akai Force, Akai MPC & Raspberry Pi](https://mega.nz/file/t1R3CT7A#xDu9hfJSUfS5sj4c75NDMoXO4TSXmhUpW7uGY8az7yo)
+## Download Latest Binaries 0.1.7
+1. [Akai Force, Akai MPC & Raspberry Pi](https://mega.nz/file/lwIiWKLB#VCZwpROqcgbIbnyuu1CkNY-0Q2T6d6Mih7pPnoX4pkc)
+
+2. [Max OSX (intel only)](https://mega.nz/file/51AxyYbC#hqyb-Lq9xS5PsFYKdsy-ONP7J-OY2mdrxwIQyFvVHAs)
 
 
 ## Features:
@@ -12,7 +14,7 @@
 5. Velocity + Velocity Humanization / Channel  (Adds/Subtracts values up defined (max 32) from Base Velocity).
 6. Sequence Shifting (Offset)
 7. Different Note/Time Divisions per channel.
-8. CC Sequncing : *See Below
+8. CC Sequencing : *See Below
 9. Realtime Note Based Transpostion
 10. Will run on Force and Raspberry Pi
 11. ** v 0.1.4 Added Loop Parameter, Loop Parameter Sets the Sequence Restart Point. Values > Steps Creates Polythythms 
@@ -40,6 +42,16 @@
             1.  0: OFF, Will not change octaves based on incoming note velocity.
             2.  1: ON, Will Change octaves based on incoming note velocity.
         3.  RECEIVE NOTES : (0-1) : Switches Realtime Note Input Respose Off/On.
+
+15.  **** **v 0.1.7 Features****
+     1.   128 Presets Slots to Save / Load  ( Supports program change loading)
+     2.   Master Sync (CC 50, 0-8): Parameter Update Quantization (default 1/4) : Changes to Steps, Fill, Shift etc are quantized to  master clock from none to up to 8 bars.
+     3.   When using console, loaded preset values display.
+     4.   Preset Feedback Update, If your midi control is set to receive from euclidier on chn16, Euclidier will send the respective cc back to your control surface (mpc/ akai force) to Update the UI parameters.
+     5.   Assignable Channels Reduced to 1-15 (Ch:16 is now reserved for feedback msssages.)
+     6.   Many Stability Optimizations.
+     7.   Added Drum to Track Type. When Trac is set to Drum (2) , it will not transpose or shift octaves on incoming notes. Might be usefor for other purposes in future.
+  
         
 
 
@@ -71,7 +83,7 @@ or if using Mockba/Kick Gen Mod, you can put in a launch script in their respect
 
 ## Midi Mapping :
 
-    1. CC: 1,11,21,31,41,51,61,71 : Enable Channels (1-8 Respectively) value > 64 = on
+    1. CC: 1,11,21,31,41,51,61,71 : Enable Channels (1-8 Respectively) value > 63 = on
 
     2. CC: 2,12,22,32,42,52,62,72 :  Set Pitch / Note for Channels (1-8) Values 0-127
 
@@ -89,13 +101,13 @@ or if using Mockba/Kick Gen Mod, you can put in a launch script in their respect
 
     4. CC: 4,14,24,34,44,54,69,74 : Set Sequence Length in steps Values (2-64).
 
-    5. CC: 5,15,25,35,45,55,65,75 : Set Fill (2-32) Fill are The Number of Filled Steps that will be spread over the Sequence. if Fill > Steps , All steps will be enabled.
+    5. CC: 5,15,25,35,45,55,65,75 : Set Fill (1-64) Fill are The Number of Filled Steps that will be spread over the Sequence. if Fill > Steps , All steps will be enabled.
 
-    6. CC: 6,16,26,36,46,56,66,76 : Set Sequence Shift Values 0-32 . Sets the Sequence Offset, values greater and sequence length Keep Rotating. for example Shift of 3 will move all steps 3 steps towards right and out of bounds will wrap around. 
+    6. CC: 6,16,26,36,46,56,66,76 : Set Sequence Shift Values 0-64 . Sets the Sequence Offset, values greater and sequence length Keep Rotating. for example Shift of 3 will move all steps 3 steps towards right and out of bounds will wrap around. 
 
-    7. CC: 9,17,27,37,47,57,67,77: Note Gate Length (10-100), Sets the Duration of the Note based on Time Division in the Sequence Default is 65%.
+    7. CC: 9,17,27,37,47,57,67,77: Note Gate Length (10-95), Sets the Duration of the Note based on Time Division in the Sequence Default is 65%.
 
-    8. CC:8,18,28,38,48,58,68,78 : Sequence Output Midi Channel (1-16)
+    8. CC:8,18,28,38,48,58,68,78 : Sequence Output Midi Channel (1-15)
 
     9.  CC: 81,82,83,84,85,86,87,88 : Set Base Value for (Velocity or CC) For the Channel, default 96
 
@@ -115,8 +127,14 @@ or if using Mockba/Kick Gen Mod, you can put in a launch script in their respect
         1.  CC 99:  (0-1): Receive Notes
         2.  CC 100: (any positive value) : Reset  Any Note transposition and Octave offsets from all Tracks.
         3.  CC 119: Disable Octave Switching on incoming Note Velocity (you dont want it with drums etc) 
+        4.  CC 70: Sync All Tracks (sets the internal step position to 0)
+        5.  CC 20: (0-127), Select a Preset Slot to Load from or to Save to.
+        6.  CC 29: Load From Selected Preset Slot.
+        7.  CC 30: Save Current to Selected Preset Slot.
 
-    14. Track  Note Transposition (Transposition if ) (Adds to Track Note Value)
+    14. Program Change (0-127) : Load from Preset Slots 0-127.
+
+    15. Track  Note Transposition (Transposition if ) (Adds to Track Note Value)
         1.  Notes 0-11 (c-2) : Transpose Track 1 by +(0-11)
         2.  Notes 12-23 (c-1): Transpose Track 2 by +(0-11)
         3.  Notes 24-35 (c0) : Transpose Track 3 by +(0-11)
@@ -126,9 +144,9 @@ or if using Mockba/Kick Gen Mod, you can put in a launch script in their respect
         7.  Notes 72-83 (c4) : Transpose Track 7 by +(0-11)
         8.  Notes 84-95 (c5) : Transpose Track 8 by +(0-11)
 
-    15.  Notes: 96-103 : Reset Octave shifts on Tracks 1-8 respectively
-    16.  Notes: 108-115 : Apply +1 Octave Shift to tracks 1-8 respectively.
-    17.  Notes: 120-127 : Apply -1 Octave Shift to tracks 1-8 respectively.
+    16.  Notes: 96-103 : Reset Octave shifts on Tracks 1-8 respectively
+    17.  Notes: 108-115 : Apply +1 Octave Shift to tracks 1-8 respectively.
+    18.  Notes: 120-127 : Apply -1 Octave Shift to tracks 1-8 respectively.
 
 
 
@@ -191,7 +209,16 @@ copy the generated bin/euclidier file to your Force/MPC and run from ssh
 
 3. 3.Things to Try,  For Longer, Just multiply the value the values. and try setiing up loop few steps more than total steps.
 
-### [<<< Refernce & World Rhythms >>](http://cgm.cs.mcgill.ca/~godfried/publications/banff.pdf)
+### Creating Accents:
+1. Create CC1 Track : Set Type to : 3
+2. Set Note to : 11 (expression) . (Expression increases or decreses channel volume between 0-100% of its volume. )
+3. Set Base Value  to say 90 (Non accent value)
+4. Set Value Alt to : 127
+5. Assign Ch to same as the for the instrument you want to control.
+
+
+
+### [<<< Reference & World Rhythms >>](http://cgm.cs.mcgill.ca/~godfried/publications/banff.pdf)
 
 
 
