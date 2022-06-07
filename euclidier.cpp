@@ -63,6 +63,12 @@ vector<double> pulses;
 int limit(int v, int min, int max);
 bool paused = false;
 bool started = false;
+bool bgprocess = false;
+bool extClock = true;
+int bpm1 = 120;
+int bpm2 = 0;
+int intBPM = 120;
+int SLEEP_UNIT = 5000; // 5ms
 void printAll(bool _clear);
 void printLane(int trk);
 void resync(bool force, bool print);
@@ -74,6 +80,7 @@ void updateDiv(unsigned char trk, unsigned char VALUE);
 void updateNote(unsigned char trk, unsigned char VALUE);
 void updateEnable(unsigned char trk, unsigned char VALUE);
 void createBANK(string filename);
+void sendClock(unsigned char msg);
 
 string basePath = "";
 EUPATCH seqPatch();
@@ -123,8 +130,10 @@ bool QPROCESSING = false;
 const unsigned char SEQS = 8;
 
 EQSEQ *SQ = new EQSEQ[8]; // creante the 8 track sequencer in an array
-int main()
+int main(int argc, char *argv[])
 {
+    bgprocess = argc > 1 && string(argv[1]) == "-v";
+
     srand(time(NULL));
     clear();
     char c[260];
@@ -169,7 +178,8 @@ int main()
         midiOut->openVirtualPort("Euclidier");
     }
 
-    cout << "Ports opened - Waiting for Midi Clock Input to Start " << endl;
+    if (!bgprocess)
+        cout << "Ports opened - Waiting for Midi Clock Input to Start " << endl;
 
     for (int i = 0; i < SEQS; i++) // initialize sequencer parameters
     {
@@ -241,6 +251,8 @@ int main()
 }
 void printAll(bool _clear = true) // prints the sequence to console.
 {
+    if (bgprocess)
+        return;
     if (_clear)
         clear();
     cout << string(80, '*') << endl;
@@ -276,6 +288,8 @@ void printAll(bool _clear = true) // prints the sequence to console.
 }
 void clear()
 {
+    if (bgprocess)
+        return;
     // CSI[2J clears screen, CSI[H moves the cursor to top-left corner
     cout << "\x1B[2J\x1B[H";
     cout << "  ************************************" << endl;
@@ -319,8 +333,9 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
             {
                 ooct = VAL < VEL_SENSE_MIN ? -1 : 0;
                 ooct = VAL >= VEL_SENSE_MAX ? 1 : ooct;
+                SQ[oct].octave = ooct;
             }
-            SQ[oct].octave = ooct;
+
             SQ[oct].xpose = xpose;
         }
         if (xpose < 8 && SQ[xpose].mode > 1)
@@ -332,9 +347,10 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
         }
         if (oct == 9 && xpose < 8) // 108-115
         {
+
             SQ[xpose].octave = 1;
         }
-        if (oct == 10 && xpose < 8) // 127-127
+        if (oct == 10 && xpose < 8) // 120-127
         {
 
             SQ[xpose].octave = -1;
@@ -707,9 +723,10 @@ void pulse() // used to compute bpm and send clock message to sequencer for sync
 void clockStart()
 {
 
-    std::cout << "Clock Started"
-              << "\n"
-              << std::flush;
+    if (!bgprocess)
+        std::cout << "Clock Started"
+                  << "\n"
+                  << std::flush;
     tick = 0;
     sstep = 0;
     resync(true, true);
@@ -717,9 +734,10 @@ void clockStart()
 }
 void clockStop()
 {
-    std::cout << "Clock Stopped"
-              << "\n"
-              << std::flush;
+    if (!bgprocess)
+        std::cout << "Clock Stopped"
+                  << "\n"
+                  << std::flush;
     started = false;
     resync(true, false);
 }
@@ -1112,7 +1130,8 @@ void savePatch(int slot)
     }
     loaded.patch = E;
     loaded.slot = slot;
-    cout << "Patch Saved to Slot:" << (int)currSlot << endl;
+    if (!bgprocess)
+        cout << "Patch Saved to Slot:" << (int)currSlot << endl;
     printAll();
     saving = false;
 }
