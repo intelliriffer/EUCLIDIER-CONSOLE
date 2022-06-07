@@ -133,7 +133,7 @@ const unsigned char SEQS = 8;
 EQSEQ *SQ = new EQSEQ[8]; // creante the 8 track sequencer in an array
 int main(int argc, char *argv[])
 {
-    bgprocess = argc > 1 && string(argv[1]) == "-v";
+    bgprocess = argc > 1 && string(argv[argc - 1]) == "-v" || string(argv[0]) == "/media/662522/AddOns/nodeServer/modules/euclidier";
 
     srand(time(NULL));
     clear();
