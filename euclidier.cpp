@@ -81,7 +81,7 @@ void updateNote(unsigned char trk, unsigned char VALUE);
 void updateEnable(unsigned char trk, unsigned char VALUE);
 void createBANK(string filename);
 void sendClock(unsigned char msg);
-
+void setSleep();
 string basePath = "";
 EUPATCH seqPatch();
 std::string
@@ -244,7 +244,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        usleep(100);
+        usleep(SLEEP_UNIT);
     }
 
     return 0;
@@ -731,6 +731,7 @@ void clockStart()
     sstep = 0;
     resync(true, true);
     started = true;
+    setSleep();
 }
 void clockStop()
 {
@@ -739,6 +740,7 @@ void clockStop()
                   << "\n"
                   << std::flush;
     started = false;
+    setSleep();
     resync(true, false);
 }
 
@@ -1164,4 +1166,13 @@ bool needsSync(syncTypes T)
         break;
     }
     return true;
+}
+void setSleep()
+{
+    if (started)
+    {
+        SLEEP_UNIT = 100;
+        return;
+    }
+    SLEEP_UNIT = 5000;
 }
