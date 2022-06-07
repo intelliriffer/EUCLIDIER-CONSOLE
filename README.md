@@ -1,9 +1,9 @@
-# Euclidier - 8 Channel Midi Euclidean Note Sequencer for Akai Force/ Akai MPC / Raspberry pi / Mac OSX (intel) Beta 0.1.7
+# Euclidier - 8 Channel Midi Euclidean Note Sequencer for Akai Force/ Akai MPC / Raspberry pi / Mac OSX (intel) Beta 0.1.8
 
-## Download Latest Binaries 0.1.7
-1. [Akai Force, Akai MPC & Raspberry Pi](https://mega.nz/file/lwIiWKLB#VCZwpROqcgbIbnyuu1CkNY-0Q2T6d6Mih7pPnoX4pkc)
+## Download Latest Binaries 0.1.8
+1. [Akai Force, Akai MPC & Raspberry Pi](https://mega.nz/file/kkhTUILQ#6C5HmxVo5gBDOwf4-Ut8xqvhVdaRlgo0hiePp4hF1es)
 
-2. [Max OSX (intel only)](https://mega.nz/file/51AxyYbC#hqyb-Lq9xS5PsFYKdsy-ONP7J-OY2mdrxwIQyFvVHAs)
+2. [Max OSX (intel only)](https://mega.nz/file/ZoBCESBL#gpWRZelZHE7NXsq_5xJLHHsOyjKaipFtfltOx3XJIG4)
 
 
 ## Features:
@@ -15,15 +15,16 @@
 6. Sequence Shifting (Offset)
 7. Different Note/Time Divisions per channel.
 8. CC Sequencing : *See Below
-9. Realtime Note Based Transpostion
-10. Will run on Force and Raspberry Pi
-11. ** v 0.1.4 Added Loop Parameter, Loop Parameter Sets the Sequence Restart Point. Values > Steps Creates Polythythms 
-12. ** 0.1.5
+9. *** New >>> Internal + External Clock Support.
+10. Realtime Note Based Transpostion
+11. Will run on Force and Raspberry Pi
+12. ** v 0.1.4 Added Loop Parameter, Loop Parameter Sets the Sequence Restart Point. Values > Steps Creates Polythythms 
+13. ** 0.1.5
     1. Added Realtime Note Triggered Transpostion - See below for details.
     2. Extended Steps to 2-64
     
-13. New Midi Mapping Layout with Loop Controls added
-14. *** 0.1.6 New Killer Features
+14. New Midi Mapping Layout with Loop Controls added
+15. *** 0.1.6 New Killer Features
     1.  Velocity Sense (Default On) : Note Octave will be Shifted based on Incoming Note Velocities
         1.  Velocity < 22 : Octave -1
         2.  Velocity 23 - 126 : octave 0 (As the Orginal Note)
@@ -43,7 +44,7 @@
             2.  1: ON, Will Change octaves based on incoming note velocity.
         3.  RECEIVE NOTES : (0-1) : Switches Realtime Note Input Respose Off/On.
 
-15.  **** **v 0.1.7 Features****
+16.  **** **v 0.1.7 Features****
      1.   128 Presets Slots to Save / Load  ( Supports program change loading)
      2.   Master Sync (CC 50, 0-8): Parameter Update Quantization (default 1/4) : Changes to Steps, Fill, Shift etc are quantized to  master clock from none to up to 8 bars.
      3.   When using console, loaded preset values display.
@@ -132,10 +133,18 @@ or if using Mockba/Kick Gen Mod, you can put in a launch script in their respect
         5.  CC 20: (0-127), Select a Preset Slot to Load from or to Save to.
         6.  CC 29: Load From Selected Preset Slot.
         7.  CC 30: Save Current to Selected Preset Slot.
+    14. **Clock Control**
+        1.  Use External Clock: CC: 59 (0-1) 
+        2.  When 0 Internal Clock will be used, and also sent out. Clock Must be started using Start / Stop CC: 60 (0-1)
+        3.  Stop / Start Internal Clock : CC:80 Values (0-1)
+        4.  BPM1: CC:39 Values (30-127)
+        5.  BPM2: CC:40 Values (0-127)
+        6.  Internal Clock BPM is Set to Values of BPM1 + BPM2 
+           1. So if BPM1 = 100 and BPM 2 = 40, The Actual BPM becomes: 140
 
-    14. Program Change (0-127) : Load from Preset Slots 0-127.
+    15. Program Change (0-127) : Load from Preset Slots 0-127.
 
-    15. Track  Note Transposition (Transposition if ) (Adds to Track Note Value)
+    16. Track  Note Transposition (Transposition if ) (Adds to Track Note Value)
         1.  Notes 0-11 (c-2) : Transpose Track 1 by +(0-11)
         2.  Notes 12-23 (c-1): Transpose Track 2 by +(0-11)
         3.  Notes 24-35 (c0) : Transpose Track 3 by +(0-11)
@@ -145,9 +154,9 @@ or if using Mockba/Kick Gen Mod, you can put in a launch script in their respect
         7.  Notes 72-83 (c4) : Transpose Track 7 by +(0-11)
         8.  Notes 84-95 (c5) : Transpose Track 8 by +(0-11)
 
-    16.  Notes: 96-103 : Reset Octave shifts on Tracks 1-8 respectively
-    17.  Notes: 108-115 : Apply +1 Octave Shift to tracks 1-8 respectively.
-    18.  Notes: 120-127 : Apply -1 Octave Shift to tracks 1-8 respectively.
+    17.  Notes: 96-103 : Reset Octave shifts on Tracks 1-8 respectively
+    18.  Notes: 108-115 : Apply +1 Octave Shift to tracks 1-8 respectively.
+    19.  Notes: 120-127 : Apply -1 Octave Shift to tracks 1-8 respectively.
 
 
 
