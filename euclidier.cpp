@@ -68,6 +68,7 @@ bool extClock = true;
 int bpm1 = 120;
 int bpm2 = 0;
 int intBPM = 120;
+long long lastPulse = 0;
 int SLEEP_UNIT = 5000; // 5ms
 void printAll(bool _clear);
 void printLane(int trk);
@@ -236,6 +237,25 @@ int main(int argc, char *argv[])
         }
         if (started)
         {
+            if (!extClock) // generate pulse
+            {
+                float pls = (60000 * 1000) / (BPM * 24);
+                long long pulseUS = round(pls);
+                long long diff = us - lastPulse;
+                if ((diff >= pulseUS) || lastPulse == 0)
+                {
+                    long correction = 0;
+                    if (lastPulse > 0)
+                    {
+                        correction = pls - diff;
+                        // float _bpm = (24 * diff)
+                    }
+                    BPM = intBPM;
+                    pulse();
+                    lastPulse = us + correction;
+                }
+            }
+
             if (!doSync)
                 processQ();
             for (char i = 0; i < SEQS; i++)
@@ -398,6 +418,42 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
             savePatch(currSlot);
             return;
         }
+
+        if (CC == 39)
+        { // BPM1
+            bpm1 = limit(VAL, 30, 127);
+            intBPM = bpm1 + bpm2;
+        }
+        if (CC == 40)
+        { // BPM1
+            bpm2 = limit(VAL, 0, 127);
+            intBPM = bpm1 + bpm2;
+            return;
+        }
+        if (CC == 59)
+        {
+            extClock = limit(VAL, 0, 1);
+
+            return;
+        }
+
+        if (CC == 60) // start stop
+        {
+            if (extClock)
+                return;
+            if (VAL == 0 && started)
+            { // steop
+
+                clockStop();
+            }
+            if (VAL == 1 & !started)
+            {
+                clockStart();
+            }
+
+            return;
+        }
+
         if (CC == 100 && VAL > 0 && VAL % 2 == 0)
         {
             for (unsigned char i = 0; i < SEQS; i++)
@@ -609,7 +665,12 @@ void sendNote(unsigned char type, unsigned char ch, unsigned char note, unsigned
     // cout << "Sending " << (int)note << " with value " << (int)vel << endl;
     midiOut->sendMessage(&messageOut);
 }
-
+void sendClock(unsigned char msg)
+{
+    std::vector<unsigned char> messageOut;
+    messageOut.push_back(msg);
+    midiOut->sendMessage(&messageOut);
+}
 int limit(int v, int min, int max)
 {
     if (v < min)
@@ -677,10 +738,12 @@ void handleClockMessage(unsigned char message)
     {
 
     case 248:
-        pulse();
+        if (extClock)
+            pulse();
         return;
     case 250:
-        clockStart();
+        if (extClock)
+            clockStart();
         return;
     case 252:
         clockStop();
@@ -690,6 +753,10 @@ void handleClockMessage(unsigned char message)
 
 void pulse() // used to compute bpm and send clock message to sequencer for sync
 {
+    if (!extClock)
+    {
+        sendClock(248);
+    }
     sendTicks();
     tick += 1;
     sstep++;
@@ -697,28 +764,31 @@ void pulse() // used to compute bpm and send clock message to sequencer for sync
     int ystep = tick == 0 ? 0 : (tick + 1) % (int)((24 * 4 / syncDiv));
     if (ystep == 0 && doSync)
         processQ();
-
-    const uint mSize = 12; // fill up averaging buffer before computing final bpm;
-    pulses.push_back(ms());
-    /* if (pulses.size() < mSize)
-         return;*/
-    if (pulses.size() > mSize)
+    if (extClock)
     {
-        pulses.erase(pulses.begin());
+        const uint mSize = 12; // fill up averaging buffer before computing final bpm;
+        pulses.push_back(ms());
+        /* if (pulses.size() < mSize)
+             return;*/
+        if (pulses.size() > mSize)
+        {
+            pulses.erase(pulses.begin());
+        }
+
+        double avg = 0;
+        unsigned cnt = 0;
+        for (uint i = 1; i < pulses.size(); i++)
+        {
+            double msd = pulses.at(i) - pulses.at(i - 1);
+            double localavg = (60 / ((msd * 24) / 1000));
+            avg += localavg;
+            cnt++;
+        }
+        float bpm = (avg / cnt);
+        BPM = bpm;
     }
 
-    double avg = 0;
-    unsigned cnt = 0;
-    for (uint i = 1; i < pulses.size(); i++)
-    {
-        double msd = pulses.at(i) - pulses.at(i - 1);
-        double localavg = (60 / ((msd * 24) / 1000));
-        avg += localavg;
-        cnt++;
-    }
-    float bpm = (avg / cnt);
-    BPM = bpm;
-    updateBPM(bpm);
+    updateBPM(BPM);
 }
 void clockStart()
 {
@@ -727,14 +797,19 @@ void clockStart()
         std::cout << "Clock Started"
                   << "\n"
                   << std::flush;
+    if (!extClock)
+        sendClock(250);
     tick = 0;
     sstep = 0;
+    lastPulse = 0;
     resync(true, true);
     started = true;
     setSleep();
 }
 void clockStop()
 {
+    if (!extClock)
+        sendClock(252);
     if (!bgprocess)
         std::cout << "Clock Stopped"
                   << "\n"
