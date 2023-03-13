@@ -1,9 +1,9 @@
 # Euclidier - 8 Channel Midi Euclidean Note Sequencer for Akai Force/ Akai MPC / Raspberry pi / Mac OSX (intel) Beta 0.1.8
 
 ## Download Latest Binaries 0.1.9
-1. [Akai Force, Akai MPC & Raspberry Pi](https://mega.nz/file/kkhTUILQ#6C5HmxVo5gBDOwf4-Ut8xqvhVdaRlgo0hiePp4hF1es)
+1. [Akai Force, Akai MPC & Raspberry Pi](https://mega.nz/file/11YiyDRa#g_HXT8K84pb7MXOKbtXLrbMh424XHjX8gRBLHaGx--s)
 
-2. [Max OSX (intel only)](https://mega.nz/file/ZoBCESBL#gpWRZelZHE7NXsq_5xJLHHsOyjKaipFtfltOx3XJIG4)
+2. [Max OSX (intel only)](https://mega.nz/file/dxJ1yKwB#SXfqMWB2099HD3kfrdFe8q2ANZc6UTyorPve5ItZFzQ)
 
 
 ## Features:
