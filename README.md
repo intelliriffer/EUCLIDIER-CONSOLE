@@ -1,6 +1,6 @@
 # Euclidier - 8 Channel Midi Euclidean Note Sequencer for Akai Force/ Akai MPC / Raspberry pi / Mac OSX (intel) Beta 0.1.8
 
-## Download Latest Binaries 0.1.8
+## Download Latest Binaries 0.1.9
 1. [Akai Force, Akai MPC & Raspberry Pi](https://mega.nz/file/kkhTUILQ#6C5HmxVo5gBDOwf4-Ut8xqvhVdaRlgo0hiePp4hF1es)
 
 2. [Max OSX (intel only)](https://mega.nz/file/ZoBCESBL#gpWRZelZHE7NXsq_5xJLHHsOyjKaipFtfltOx3XJIG4)
@@ -52,6 +52,9 @@
      5.   Assignable Channels Reduced to 1-15 (Ch:16 is now reserved for feedback msssages.)
      6.   Many Stability Optimizations.
      7.   Added Drum to Track Type. When Trac is set to Drum (2) , it will not transpose or shift octaves on incoming notes. Might be usefor for other purposes in future.
+17. **** v 0.1.9 features
+    1.  Randomizer Added (See Below)
+    2.  Bug fix for Drum mode.
   
         
 
@@ -117,7 +120,7 @@ or if using Mockba/Kick Gen Mod, you can put in a launch script in their respect
         2.  In CC Mode 1: Each Active Step Sends CC with VALUE ALT and Reverts back to BASE VALUE after Step/Gate Duration.
         3.  in CC Mode 2: Each Active Step Sends the CC with a "Random Value" between BASE VALUE and BALUE ALT. It Reverts back to BASE VALUE after Step/Gate Duration.
 
-    11. CC: 101,102,103,104,105,106,107,108 : Set LOOP Steps (Restart Point) 0=off, the Sequence Restarts at its Number of steps. 1-64 : The sequnce will play cyclickly until Loop Point number of steps have been played and then will restart. Values < steps , will shorten the playing sequence pattern.
+    11. CC: 101,102,103,104,105,106,107,108 : Set LOOP Steps (Restart Point) 0=off, the Sequence Restarts at its Number of steps. 1-64 : The sequnce will play cyclicly until Loop Point number of steps have been played and then will restart. Values < steps , will shorten the playing sequence pattern.
 
     12. CC: 111,112,113,114,115,116,117,118 : Set Track Modes Between
         1.   1: Note
@@ -157,6 +160,12 @@ or if using Mockba/Kick Gen Mod, you can put in a launch script in their respect
     17.  Notes: 96-103 : Reset Octave shifts on Tracks 1-8 respectively
     18.  Notes: 108-115 : Apply +1 Octave Shift to tracks 1-8 respectively.
     19.  Notes: 120-127 : Apply -1 Octave Shift to tracks 1-8 respectively.
+    20.  Randommize : CC:90 Will Randomize STEPS, FILL(PULSES) SHIFT AND LOOP FOR A LANES.
+    21.  Rand Lane Select: CC:89 set which lane(lanes will be randomized)
+         1.   Value 0: All Lanes
+         2.   Values 1-8: Respective Lane Only
+         3.   Value 9: All Lanes Except lane 1 (useful if you want to randomize other lanes against a single manually set lane pattern like kick drum)
+         4.   Value 10: All Lens except lane 5 (similar to above)
 
 
 

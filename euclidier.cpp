@@ -320,7 +320,7 @@ void clear()
     // CSI[2J clears screen, CSI[H moves the cursor to top-left corner
     cout << "\x1B[2J\x1B[H";
     cout << "  ************************************" << endl;
-    cout << "  Euclidier v1.5  (Press Ctrl + C to Quit)" << endl;
+    cout << "  Euclidier v1.9  (Press Ctrl + C to Quit)" << endl;
     cout << "  ************************************" << endl;
 }
 
