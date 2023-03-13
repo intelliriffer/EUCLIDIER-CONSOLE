@@ -61,6 +61,8 @@ long long tick = 0;
 
 vector<double> pulses;
 int limit(int v, int min, int max);
+int RANDLANE = 0;
+int RANDMAXFILL = 40;
 bool paused = false;
 bool started = false;
 bool bgprocess = false;
@@ -80,6 +82,10 @@ void updateLoop(unsigned char trk, unsigned char VALUE);
 void updateDiv(unsigned char trk, unsigned char VALUE);
 void updateNote(unsigned char trk, unsigned char VALUE);
 void updateEnable(unsigned char trk, unsigned char VALUE);
+int getRandValue(int lo, int hi);
+void Randomize();
+void RandomizeLane(int lane);
+
 void createBANK(string filename);
 void sendClock(unsigned char msg);
 void setSleep();
@@ -133,7 +139,8 @@ const unsigned char SEQS = 8;
 EQSEQ *SQ = new EQSEQ[8]; // creante the 8 track sequencer in an array
 int main(int argc, char *argv[])
 {
-    bgprocess = argc > 1 && string(argv[argc - 1]) == "-v" || string(argv[0]) == "/media/662522/AddOns/nodeServer/modules/euclidier";
+    bgprocess = argc > 1 && string(argv[argc - 1]) == "-v";
+    // || string(argv[0]) == "/media/662522/AddOns/nodeServer/modules/euclidier";
 
     srand(time(NULL));
     clear();
@@ -313,7 +320,7 @@ void clear()
     // CSI[2J clears screen, CSI[H moves the cursor to top-left corner
     cout << "\x1B[2J\x1B[H";
     cout << "  ************************************" << endl;
-    cout << "  Euclidier  (Press Ctrl + C to Quit)" << endl;
+    cout << "  Euclidier v1.5  (Press Ctrl + C to Quit)" << endl;
     cout << "  ************************************" << endl;
 }
 
@@ -452,6 +459,40 @@ void onMIDI(double deltatime, std::vector<unsigned char> *message, void * /*user
             }
 
             return;
+        }
+        if (CC == 79)
+        {
+            RANDMAXFILL = VAL < 10 ? 10 : VAL;
+            RANDMAXFILL = VAL > 100 ? 100 : VAL;
+        }
+        if (CC == 89)
+        {
+            VAL = VAL > 10 ? 10 : VAL;
+            RANDLANE = VAL;
+        }
+        if (CC == 90 && VAL > 0 && VAL % 2 == 0)
+        {
+            loading = getUS() + (1000 * 100);
+            if (RANDLANE > 0 && RANDLANE <= 8)
+            {
+
+                RandomizeLane(RANDLANE - 1);
+            }
+            else
+            {
+                for (int i = 0; i != 8; i++)
+                {
+                    if ((RANDLANE == 9 && i == 0) || RANDLANE == 10 && i == 4)
+                    {
+                        cout << "Lane: " << i + 1 << " skipped from randomization!" << endl;
+                    }
+                    else
+                    { // for values 9 and 10, skips randomizing of lanes 1  or 5 (usually kick)
+                        RandomizeLane(i);
+                    }
+                }
+            }
+            printAll(true);
         }
 
         if (CC == 100 && VAL > 0 && VAL % 2 == 0)
@@ -1250,4 +1291,79 @@ void setSleep()
         return;
     }
     SLEEP_UNIT = 5000;
+}
+
+int getRandValue(int lo, int hi)
+{
+    return rand() % (hi - lo) + lo;
+}
+
+void RandomizeLane(int lane)
+{
+    int i = lane;
+    loading = getUS() + (1000 * 100); // 100ms
+                                      // cout << "loading is" << loading << endl;
+    int rnd = getRandValue(40, 100);
+    /* SQ[i].vel = rnd;
+     sendNote(0xB0, 15, i + 81, rnd);
+
+     rnd = getRandValue(40, 100);
+     SQ[i].velh = rnd;
+     sendNote(0xB0, 15, i + 91, rnd);*/
+    rnd = getRandValue(0, 32);
+    rnd = rnd < 9 ? 0 : rnd - 8;
+    rnd = rnd > 16 ? 16 : rnd;
+    SQ[i].loop = rnd;
+    sendNote(0xB0, 15, i + 101, rnd);
+
+    if (!started)
+    {
+        rnd = getRandValue(4, 16);
+        SQ[i].steps = rnd;
+        if (i != 6)
+            sendNote(0xB0, 15, (i * 10) + 4, rnd);
+        else
+            sendNote(0xB0, 15, (i * 10) + 9, rnd);
+        cout << RANDMAXFILL << endl;
+        cout << SQ[i].steps * RANDMAXFILL << endl;
+        float rndMax = (SQ[i].steps * RANDMAXFILL) / 100;
+        cout << rndMax << endl;
+        int xrnd = (int)rndMax;
+        rnd = getRandValue(1, xrnd <= 1 ? 2 : xrnd);
+        cout << "rnd is " << rnd << endl;
+        SQ[i].pulses = rnd;
+        sendNote(0xB0, 15, (i * 10) + 5, rnd);
+        rnd = getRandValue(0, 16);
+        SQ[i].shift = rnd;
+        sendNote(0xB0, 15, (i * 10) + 6, rnd);
+        SQ[i].updateSeq();
+    }
+    else
+    {
+        rnd = getRandValue(4, 16);
+        if (i != 6)
+        {
+            sendNote(0xB0, 15, (i * 10) + 4, rnd);
+
+            queCC((i * 10) + 4, i, rnd, STEP);
+        }
+        else
+        {
+            sendNote(0xB0, 15, (i * 10) + 9, rnd);
+            queCC((i * 10) + 9, i, rnd, STEP);
+        }
+
+        int rndMax = (int)(SQ[i].steps * RANDMAXFILL) / 100;
+        rnd = getRandValue(1, rndMax <= 1 ? 2 : rndMax);
+        sendNote(0xB0, 15, (i * 10) + 5, rnd);
+        queCC((i * 10) + 5, i, rnd, PULSE);
+
+        rnd = getRandValue(0, 16);
+        sendNote(0xB0, 15, (i * 10) + 6, rnd);
+        queCC((i * 10) + 6, i, rnd, SHIFT);
+    }
+
+    //  resync(true, true);
+
+    //  cout << "REad " << (int)E.lane[0].pulses << endl;
 }

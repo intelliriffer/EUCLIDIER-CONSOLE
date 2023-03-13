@@ -152,10 +152,10 @@ void EQSEQ::clock(long long ts) // triggered every 100 microseconds (1/10 ms)
         return;
     if (ts - this->__OFF > 0 && this->__OFF > 0) // send note off or cc reset
     {
-        if (this->mode <= 1)
+        if (this->mode <= 2)
             this->sendNote(0x80, this->ch - 1, this->lastNote, 0);
 
-        if (this->mode > 1 && this->lastNote > 0 && this->lastNote < 120)
+        if (this->mode > 2 && this->lastNote > 0 && this->lastNote < 120)
         { // cc
 
             this->sendNote(0xB0, this->ch - 1, this->lastNote, this->vel); // reset cc
